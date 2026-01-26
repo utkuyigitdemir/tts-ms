@@ -1,0 +1,21 @@
+# Coqui TTS (XTTS v2) - Legacy Engine
+# Python: >=3.9, <3.13 (3.13 not supported)
+# GPU: CUDA recommended for reasonable speed
+# Disk: ~2GB for model download
+#
+# IMPORTANT: Use the maintained fork (idiap/coqui-ai-TTS), not the abandoned original
+# Source: https://github.com/idiap/coqui-ai-TTS
+# PyPI: https://pypi.org/project/coqui-tts/
+
+# Main package (includes torch, torchaudio)
+coqui-tts>=0.24.0
+
+# Note: First run will download the XTTS v2 model (~1.8GB)
+# Model cache location: ~/.local/share/tts/ or TTS_HOME env var
+#
+# Colab installation:
+#   !pip install coqui-tts
+#
+# Known issues:
+#   - Python 3.13 not yet supported
+#   - May show ToS prompt on first model download (auto-accepted by engine)

@@ -1,0 +1,194 @@
+{
+  "engine": "piper",
+  "model": "tr_TR-dfki-medium",
+  "results": [
+    {
+      "id": "01",
+      "type": "soru",
+      "time": 0.23079133033752441,
+      "size": 87596,
+      "cpu": 47.6,
+      "ram_delta": 22.83984375,
+      "status": "OK"
+    },
+    {
+      "id": "01",
+      "type": "cevap",
+      "time": 1.6117231845855713,
+      "size": 662572,
+      "cpu": 49.65,
+      "ram_delta": 136.53515625,
+      "status": "OK"
+    },
+    {
+      "id": "02",
+      "type": "soru",
+      "time": 0.2707664966583252,
+      "size": 84524,
+      "cpu": 48.0,
+      "ram_delta": 4.65625,
+      "status": "OK"
+    },
+    {
+      "id": "02",
+      "type": "cevap",
+      "time": 1.407270908355713,
+      "size": 578092,
+      "cpu": 50.1,
+      "ram_delta": 1.203125,
+      "status": "OK"
+    },
+    {
+      "id": "03",
+      "type": "soru",
+      "time": 0.27727174758911133,
+      "size": 87596,
+      "cpu": 48.65,
+      "ram_delta": 0.0078125,
+      "status": "OK"
+    },
+    {
+      "id": "03",
+      "type": "cevap",
+      "time": 1.4422998428344727,
+      "size": 492588,
+      "cpu": 48.85,
+      "ram_delta": 0.0,
+      "status": "OK"
+    },
+    {
+      "id": "04",
+      "type": "soru",
+      "time": 0.39289140701293945,
+      "size": 124972,
+      "cpu": 48.35,
+      "ram_delta": 0.00390625,
+      "status": "OK"
+    },
+    {
+      "id": "04",
+      "type": "cevap",
+      "time": 1.3366572856903076,
+      "size": 401452,
+      "cpu": 44.5,
+      "ram_delta": 2.40625,
+      "status": "OK"
+    },
+    {
+      "id": "05",
+      "type": "soru",
+      "time": 0.25969457626342773,
+      "size": 79404,
+      "cpu": 48.1,
+      "ram_delta": 0.0,
+      "status": "OK"
+    },
+    {
+      "id": "05",
+      "type": "cevap",
+      "time": 1.7294840812683105,
+      "size": 530988,
+      "cpu": 45.4,
+      "ram_delta": 14.07421875,
+      "status": "OK"
+    }
+  ],
+  "resources": [
+    {
+      "stage": "init",
+      "duration": 0.03635072708129883,
+      "cpu": 27.2,
+      "ram_delta": 2.31640625
+    },
+    {
+      "stage": "warmup",
+      "duration": 4.754745721817017,
+      "cpu": 22.9,
+      "ram_delta": 141.78125
+    },
+    {
+      "stage": "01_soru",
+      "duration": 0.23079133033752441,
+      "cpu": 95.2,
+      "cpu_norm": 47.6,
+      "ram_delta": 22.83984375,
+      "size_kb": 85.54296875
+    },
+    {
+      "stage": "01_cevap",
+      "duration": 1.6117231845855713,
+      "cpu": 99.3,
+      "cpu_norm": 49.65,
+      "ram_delta": 136.53515625,
+      "size_kb": 647.04296875
+    },
+    {
+      "stage": "02_soru",
+      "duration": 0.2707664966583252,
+      "cpu": 96.0,
+      "cpu_norm": 48.0,
+      "ram_delta": 4.65625,
+      "size_kb": 82.54296875
+    },
+    {
+      "stage": "02_cevap",
+      "duration": 1.407270908355713,
+      "cpu": 100.2,
+      "cpu_norm": 50.1,
+      "ram_delta": 1.203125,
+      "size_kb": 564.54296875
+    },
+    {
+      "stage": "03_soru",
+      "duration": 0.27727174758911133,
+      "cpu": 97.3,
+      "cpu_norm": 48.65,
+      "ram_delta": 0.0078125,
+      "size_kb": 85.54296875
+    },
+    {
+      "stage": "03_cevap",
+      "duration": 1.4422998428344727,
+      "cpu": 97.7,
+      "cpu_norm": 48.85,
+      "ram_delta": 0.0,
+      "size_kb": 481.04296875
+    },
+    {
+      "stage": "04_soru",
+      "duration": 0.39289140701293945,
+      "cpu": 96.7,
+      "cpu_norm": 48.35,
+      "ram_delta": 0.00390625,
+      "size_kb": 122.04296875
+    },
+    {
+      "stage": "04_cevap",
+      "duration": 1.3366572856903076,
+      "cpu": 89.0,
+      "cpu_norm": 44.5,
+      "ram_delta": 2.40625,
+      "size_kb": 392.04296875
+    },
+    {
+      "stage": "05_soru",
+      "duration": 0.25969457626342773,
+      "cpu": 96.2,
+      "cpu_norm": 48.1,
+      "ram_delta": 0.0,
+      "size_kb": 77.54296875
+    },
+    {
+      "stage": "05_cevap",
+      "duration": 1.7294840812683105,
+      "cpu": 90.8,
+      "cpu_norm": 45.4,
+      "ram_delta": 14.07421875,
+      "size_kb": 518.54296875
+    }
+  ],
+  "init_time": 0.03635072708129883,
+  "warmup_time": 4.754745721817017,
+  "avg_cpu": 47.92,
+  "max_cpu": 50.1
+}

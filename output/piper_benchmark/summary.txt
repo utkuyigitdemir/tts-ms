@@ -1,0 +1,37 @@
+============================================================
+TTS-MS BENCHMARK - PIPER
+============================================================
+Tarih: 2026-01-25 18:28:27
+Platform: Google Colab (CPU - 2 core)
+Model: tr_TR-dfki-medium
+
+PERFORMANS:
+- Init: 0.04s
+- Warmup: 4.75s
+
+SONUCLAR:
+- Toplam: 5 soru
+- Soru Audio: 5/5 basarili (ort: 0.29s)
+- Cevap Audio: 5/5 basarili (ort: 1.51s)
+- Toplam Audio: 3056.4 KB
+
+KAYNAK KULLANIMI:
+- Ortalama CPU: 48%
+- Maksimum CPU: 50%
+- RAM Delta: +181.7 MB
+- GPU: N/A (CPU-only model)
+
+DETAYLAR:
+[01_soru] 0.23s | 85.5 KB | CPU:48% | OK
+[01_cevap] 1.61s | 647.0 KB | CPU:50% | OK
+[02_soru] 0.27s | 82.5 KB | CPU:48% | OK
+[02_cevap] 1.41s | 564.5 KB | CPU:50% | OK
+[03_soru] 0.28s | 85.5 KB | CPU:49% | OK
+[03_cevap] 1.44s | 481.0 KB | CPU:49% | OK
+[04_soru] 0.39s | 122.0 KB | CPU:48% | OK
+[04_cevap] 1.34s | 392.0 KB | CPU:44% | OK
+[05_soru] 0.26s | 77.5 KB | CPU:48% | OK
+[05_cevap] 1.73s | 518.5 KB | CPU:45% | OK
+
+Audio: /content/drive/MyDrive/tts-ms/output/piper/audio
+============================================================

@@ -1,0 +1,63 @@
+# Chatterbox TTS - ResembleAI's State-of-the-Art TTS
+# Python: 3.11 (recommended, tested by developers)
+# GPU: CUDA/ROCm/MPS supported, CPU fallback available
+# RAM: Minimum 8GB
+# Disk: ~1-2GB for models
+#
+# Source: https://github.com/resemble-ai/chatterbox
+# PyPI: https://pypi.org/project/chatterbox-tts/ (may have issues)
+#
+# Models:
+#   - chatterbox: English with CFG & exaggeration controls
+#   - chatterbox-turbo: Fast, English-only (350M params)
+#   - chatterbox-multilingual: 23 languages including Turkish
+
+# =============================================================================
+# RECOMMENDED: Install from source (more reliable than pip)
+# =============================================================================
+#
+# git clone https://github.com/resemble-ai/chatterbox.git
+# cd chatterbox
+# pip install -e .
+#
+# =============================================================================
+
+# PyTorch with CUDA (install first, match your CUDA version)
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# Main package (may have pkuseg build issues)
+# If pip install fails, use source installation above
+chatterbox-tts>=0.1.6
+
+# =============================================================================
+# COLAB INSTALLATION (from source - recommended)
+# =============================================================================
+#
+# # Option 1: From source (recommended)
+# !git clone https://github.com/resemble-ai/chatterbox.git
+# %cd chatterbox
+# !pip install -e .
+#
+# # Option 2: From pip (may fail due to pkuseg)
+# # !pip install chatterbox-tts
+#
+# =============================================================================
+# USAGE EXAMPLE
+# =============================================================================
+#
+# from chatterbox.tts import ChatterboxTTS
+# model = ChatterboxTTS.from_pretrained(device="cuda")
+# wav = model.generate("Hello, this is a test.")
+#
+# # For multilingual (Turkish):
+# from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+# model = ChatterboxMultilingualTTS.from_pretrained(device="cuda")
+# wav = model.generate("Merhaba, bu bir testtir.", language_id="tr")
+#
+# =============================================================================
+
+# Known issues:
+#   - pip install may fail with pkuseg==0.0.25 wheel build error
+#   - Solution: Install from source instead

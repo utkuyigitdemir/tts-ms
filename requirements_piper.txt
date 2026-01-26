@@ -1,0 +1,25 @@
+# Piper TTS - Fast CPU-based Engine
+# Python: >=3.9, <4.0
+# GPU: Not required (ONNX-based, runs on CPU)
+# Disk: ~50-100MB per voice model
+#
+# Source: https://github.com/rhasspy/piper (archived Oct 2025)
+# PyPI: https://pypi.org/project/piper-tts/
+
+# Main package
+piper-tts>=1.2.0
+
+# ONNX runtime (CPU version included with piper-tts)
+# For GPU acceleration, install separately:
+#   pip install onnxruntime-gpu
+# Then run with --cuda flag
+
+# Note: Requires downloading voice models separately
+# Turkish voice: https://huggingface.co/rhasspy/piper-voices/tree/main/tr/tr_TR
+#
+# Colab installation:
+#   !pip install piper-tts
+#
+# Download Turkish model:
+#   !wget https://huggingface.co/rhasspy/piper-voices/resolve/main/tr/tr_TR/dfki/medium/tr_TR-dfki-medium.onnx
+#   !wget https://huggingface.co/rhasspy/piper-voices/resolve/main/tr/tr_TR/dfki/medium/tr_TR-dfki-medium.onnx.json

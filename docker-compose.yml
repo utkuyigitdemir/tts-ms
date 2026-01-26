@@ -1,0 +1,97 @@
+# tts-ms Docker Compose Configuration
+#
+# Usage:
+#   docker-compose up -d                    # Start Piper (CPU-only)
+#   docker-compose --profile gpu up -d      # Start with GPU support
+#   docker-compose logs -f tts-api          # Follow logs
+#
+# Access:
+#   http://localhost:8000/health
+#   http://localhost:8000/v1/tts
+#   http://localhost:8000/docs
+
+services:
+  # Main TTS service (CPU - works with Piper)
+  tts-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TTS_MODEL_TYPE: ${TTS_MODEL_TYPE:-piper}
+    image: tts-ms:${TTS_MODEL_TYPE:-piper}
+    container_name: tts-ms-api
+    ports:
+      - "${TTS_PORT:-8000}:8000"
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Istanbul
+      - TTS_MODEL_TYPE=${TTS_MODEL_TYPE:-piper}
+      - TTS_MS_LOG_LEVEL=${TTS_MS_LOG_LEVEL:-2}
+      - TTS_MS_LOG_DIR=/app/logs
+      - TTS_MS_NO_COLOR=1
+      - TTS_MS_SKIP_WARMUP=${TTS_MS_SKIP_WARMUP:-0}
+    volumes:
+      - ./logs:/app/logs
+      - ./storage:/app/storage
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; r = httpx.get('http://localhost:8000/health'); exit(0 if r.status_code == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # GPU-enabled service for legacy/XTTS engine
+  tts-api-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TTS_MODEL_TYPE: legacy
+    image: tts-ms:legacy
+    container_name: tts-ms-api-gpu
+    ports:
+      - "${TTS_GPU_PORT:-8001}:8000"
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Istanbul
+      - TTS_MODEL_TYPE=legacy
+      - TTS_MS_LOG_LEVEL=${TTS_MS_LOG_LEVEL:-2}
+      - TTS_MS_LOG_DIR=/app/logs
+      - TTS_MS_NO_COLOR=1
+    volumes:
+      - ./logs:/app/logs
+      - ./storage:/app/storage
+      - tts-cache:/root/.local/share/tts
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    profiles:
+      - gpu
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; r = httpx.get('http://localhost:8000/health'); exit(0 if r.status_code == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: tts-ms-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      tts-api:
+        condition: service_healthy
+    profiles:
+      - nginx
+
+volumes:
+  tts-cache:
+    driver: local

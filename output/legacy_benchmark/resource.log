@@ -1,0 +1,41 @@
+============================================================
+TTS LEGACY XTTS v2 - RESOURCE LOG
+============================================================
+Tarih: 2026-01-26 02:29:07
+Platform: Google Colab (Miniconda Python 3.11)
+GPU: NVIDIA A100-SXM4-40GB
+Model: xtts_v2
+
+KAYNAK KULLANIMI (ADIM ADIM):
+============================================================
+[INIT] 0.03s | RAM: +4.1MB | GPU: 0%
+[WARMUP] 72.17s | RAM: +1602.1MB | GPU: 26%
+    Text: Merhaba.
+[01_SORU] 0.75s | 97.6KB | CPU: 9% | GPU: 27% | VRAM: 2887MB
+    Text: Sizi neden işe almalıyız?
+[01_CEVAP] 7.40s | 830.6KB | CPU: 8% | GPU: 42% | VRAM: 3293MB
+    Text: Güçlü analitik düşünme becerilerim ve takım çalışmasına yatkınlığım sayesinde projelere değer katabilirim. Ayrıca sürekli öğrenmeye açık yapım ve problem çözme yeteneklerim, şirketinizin hedeflerine ulaşmasında önemli katkılar sağlayacaktır.
+[02_SORU] 0.86s | 104.1KB | CPU: 9% | GPU: 26% | VRAM: 3293MB
+    Text: Siz bizi neden seçtiniz?
+[02_CEVAP] 5.87s | 674.6KB | CPU: 8% | GPU: 34% | VRAM: 3293MB
+    Text: Şirketinizin yenilikçi yaklaşımı ve sektördeki lider konumu beni çok etkiledi. Kariyer hedeflerimle örtüşen bu ortamda kendimi geliştirebileceğime ve anlamlı projeler üzerinde çalışabileceğime inanıyorum.
+[03_SORU] 0.94s | 115.1KB | CPU: 9% | GPU: 28% | VRAM: 3293MB
+    Text: Kötü özellikleriniz nelerdir?
+[03_CEVAP] 5.74s | 650.1KB | CPU: 8% | GPU: 41% | VRAM: 3293MB
+    Text: Bazen aşırı detaycı olabiliyorum, bu da zaman yönetimimi olumsuz etkileyebiliyor. Ancak bu özelliğimin farkındayım ve önceliklendirme teknikleri kullanarak bu durumu yönetmeye çalışıyorum.
+[04_SORU] 1.17s | 139.1KB | CPU: 9% | GPU: 29% | VRAM: 3293MB
+    Text: Beş yıl sonra kendinizi nerede görüyorsunuz?
+[04_CEVAP] 5.04s | 582.6KB | CPU: 8% | GPU: 40% | VRAM: 3293MB
+    Text: Beş yıl içinde teknik liderlik pozisyonunda olmayı hedefliyorum. Ekip yönetimi deneyimi kazanarak şirketin büyümesine stratejik katkılar sağlamak istiyorum.
+[05_SORU] 0.80s | 104.1KB | CPU: 9% | GPU: 27% | VRAM: 3293MB
+    Text: Maaş beklentiniz nedir?
+[05_CEVAP] 6.33s | 724.1KB | CPU: 8% | GPU: 27% | VRAM: 3353MB
+    Text: Piyasa koşullarını ve pozisyonun gerekliliklerini değerlendirerek, deneyimime ve yeteneklerime uygun rekabetçi bir maaş beklentim var. Bu konuda esnek olmaya ve karşılıklı bir anlaşmaya varmaya açığım.
+
+============================================================
+OZET:
+- CPU: Ort 8% / Max 9%
+- GPU: Ort 32% / Max 42%
+- VRAM Max: 3353 MB
+- Toplam RAM Delta: +6.1 MB
+============================================================

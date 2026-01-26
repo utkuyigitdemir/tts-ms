@@ -1,0 +1,28 @@
+# F5-TTS - Diffusion-based High Quality Engine
+# Python: >=3.10
+# GPU: CUDA required (VRAM ~4-6GB)
+# Disk: ~2GB for model download
+#
+# Source: https://github.com/SWivid/F5-TTS
+# PyPI: https://pypi.org/project/f5-tts/
+
+# PyTorch with CUDA (install first, match your CUDA version)
+# Colab (CUDA 12.1):
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch>=2.1.0
+torchaudio>=2.1.0
+
+# Main package
+f5-tts>=1.0.0
+
+# FFmpeg is required (system dependency)
+# Colab: !apt-get install -y ffmpeg
+# Conda: conda install ffmpeg
+
+# Colab installation:
+#   !pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+#   !pip install f5-tts
+#   !apt-get install -y ffmpeg
+#
+# Note: First run downloads model from HuggingFace (~1.5GB)
+# Models: https://huggingface.co/SWivid/F5-TTS

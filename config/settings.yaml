@@ -1,0 +1,97 @@
+app:
+  name: "tts-ms"
+  env: "colab"
+
+tts:
+  engine: "legacy"  # legacy (XTTS v2) | cosyvoice | styletts2 | f5tts | piper | chatterbox
+  model_name: "tts_models/multilingual/multi-dataset/xtts_v2"
+  default_language: "tr"
+  default_speaker: "Ana Florence"
+  device: "cpu"
+  sample_rate: 24000
+  warmup_text: "Merhaba."
+  split_sentences: true
+  quality:
+    preset: "balanced"
+    denoiser: true
+    normalize_audio: true
+    max_text_chars: 600
+  cosyvoice:
+    model_id: "cosyvoice-xxx"
+    precision: "bf16"
+    use_compile: false
+    batch_size: 1
+    temperature: 0.7
+    top_p: 0.9
+    top_k: 50
+    repetition_penalty: 1.05
+    length_scale: 1.0
+    prosody_strength: 1.0
+    vad_enabled: false
+  styletts2:
+    checkpoint_path: "models/styletts2/model.pth"
+    precision: "fp16"
+    diffusion_steps: 30
+    guidance_scale: 1.5
+    style_strength: 0.8
+    pitch_shift: 0.0
+    energy_scale: 1.0
+    speed_scale: 1.0
+    use_denoiser: true
+  f5tts:
+    checkpoint_path: "models/f5tts/model.pth"
+    precision: "bf16"
+    steps: 28
+    cfg_strength: 2.0
+    ref_audio_seconds: 10
+    ref_audio_strategy: "tail"
+    cross_fade_ms: 20
+    temperature: 0.7
+  piper:
+    model_path: "models/piper/tr_TR-dfki-medium.onnx"
+    config_path: "models/piper/tr_TR-dfki-medium.onnx.json"
+    speaker_id: 0
+    noise_scale: 0.667
+    length_scale: 1.0
+    noise_w: 0.8
+  chatterbox:
+    variant: "multilingual"  # turbo | regular | multilingual
+    cfg_weight: 0.5          # Classifier-free guidance weight (0.3-0.5)
+    exaggeration: 0.5        # Speech expressiveness (0.0-0.7+)
+    reference_audio_path: null  # Optional default reference audio for voice cloning
+
+storage:
+  base_dir: "./storage"
+  ttl_minutes: 60
+
+cache:
+  enabled: true
+  max_items: 256
+
+# Concurrency control - protects GPU from OOM
+concurrency:
+  enabled: true
+  max_concurrent: 2      # Max simultaneous synthesis operations
+  max_queue: 10          # Max requests waiting in queue
+  timeout_s: 30.0        # Request timeout
+
+# Dynamic batching - improves throughput under load
+batching:
+  enabled: false         # Enable for high-throughput scenarios
+  window_ms: 50          # Collection window
+  max_batch_size: 8      # Max requests per batch
+
+# Text chunking strategy
+chunking:
+  use_breath_groups: true   # Use breath-group aware chunking for lower TTFA
+  first_chunk_max: 80       # First chunk kept short for fast response
+  rest_chunk_max: 180       # Subsequent chunks can be longer
+  legacy_max_chars: 220     # Max chars for legacy chunking
+
+logging:
+  level: "INFO"
+  log_dir: "./logs"
+  jsonl_file: "tts-ms.jsonl"
+  rotate_max_bytes: 10485760  # 10MB
+  rotate_backup_count: 5
+  text_preview_chars: 80

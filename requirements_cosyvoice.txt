@@ -1,0 +1,61 @@
+# CosyVoice - Alibaba's Multilingual TTS
+# Python: 3.10 (strict - other versions may have issues)
+# GPU: CUDA required (VRAM ~6-8GB)
+# Disk: ~3-5GB for models
+#
+# IMPORTANT: No pip package available - must install from source!
+# Source: https://github.com/FunAudioLLM/CosyVoice
+#
+# =============================================================================
+# INSTALLATION (must be done manually - pip install won't work)
+# =============================================================================
+#
+# 1. Clone repository:
+#    git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
+#    cd CosyVoice
+#    git submodule update --init --recursive
+#
+# 2. Create conda environment (Python 3.10 required):
+#    conda create -n cosyvoice python=3.10 -y
+#    conda activate cosyvoice
+#
+# 3. Install system dependencies:
+#    # Ubuntu/Debian:
+#    sudo apt-get install sox libsox-dev
+#    # CentOS/RHEL:
+#    sudo yum install sox sox-devel
+#
+# 4. Install PyTorch (match your CUDA version):
+#    pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+#
+# 5. Install CosyVoice:
+#    pip install -r requirements.txt
+#
+# 6. Download models:
+#    # Models are downloaded automatically on first use, or manually:
+#    # https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B
+#
+# =============================================================================
+# COLAB INSTALLATION
+# =============================================================================
+#
+# !git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
+# %cd CosyVoice
+# !git submodule update --init --recursive
+# !apt-get install -y sox libsox-dev
+# !pip install -r requirements.txt
+#
+# =============================================================================
+
+# These are placeholder dependencies - actual install requires source clone
+# DO NOT use: pip install -r requirements_cosyvoice.txt
+# Instead, follow the manual installation steps above
+
+# Core dependencies (for reference only)
+torch>=2.0.0
+torchaudio>=2.0.0
+numpy<2.0.0
+scipy
+librosa
+soundfile
+onnxruntime-gpu

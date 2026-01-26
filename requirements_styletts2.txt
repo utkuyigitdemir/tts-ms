@@ -1,0 +1,43 @@
+# StyleTTS2 - Human-level TTS with Style Diffusion
+# Python: >=3.9, <=3.10 (3.11+ may have issues)
+# GPU: CUDA recommended (VRAM ~4-6GB)
+# Disk: ~1-2GB for models
+#
+# Source: https://github.com/yl4579/StyleTTS2
+# PyPI (inference only): https://pypi.org/project/styletts2/
+
+# PyTorch with CUDA (install first)
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# Main package (inference only, MIT licensed)
+styletts2>=0.1.6
+
+# System dependency: espeak-ng (required for phonemization)
+# Ubuntu/Debian: sudo apt-get install espeak-ng
+# Colab: !apt-get install -y espeak-ng
+
+# =============================================================================
+# COLAB INSTALLATION
+# =============================================================================
+#
+# !apt-get install -y espeak-ng
+# !pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+# !pip install styletts2
+#
+# =============================================================================
+# ALTERNATIVE: Install from source (for training/fine-tuning)
+# =============================================================================
+#
+# git clone https://github.com/yl4579/StyleTTS2.git
+# cd StyleTTS2
+# pip install SoundFile torchaudio munch torch pydub pyyaml librosa nltk \
+#     matplotlib accelerate transformers phonemizer einops einops-exts tqdm \
+#     typing-extensions git+https://github.com/resemble-ai/monotonic_align.git
+# sudo apt-get install espeak-ng
+#
+# =============================================================================
+
+# Note: Models available at https://huggingface.co/yl4579/StyleTTS2-LibriTTS
+# The pip package uses gruut for phonemization (MIT licensed but lower quality)

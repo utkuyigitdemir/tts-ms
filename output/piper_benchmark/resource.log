@@ -1,0 +1,29 @@
+============================================================
+TTS-MS PIPER - RESOURCE LOG
+============================================================
+Tarih: 2026-01-25 18:28:27
+Platform: Google Colab (CPU - 2 core)
+Model: tr_TR-dfki-medium
+
+KAYNAK KULLANIMI (ADIM ADIM):
+============================================================
+[INIT] 0.04s | RAM: +2.3 MB
+[WARMUP] 4.75s | CPU: 11% | RAM: +141.8 MB
+[01_SORU] 0.23s | 85.5 KB | CPU: 48% | RAM: +22.8 MB
+[01_CEVAP] 1.61s | 647.0 KB | CPU: 50% | RAM: +136.5 MB
+[02_SORU] 0.27s | 82.5 KB | CPU: 48% | RAM: +4.7 MB
+[02_CEVAP] 1.41s | 564.5 KB | CPU: 50% | RAM: +1.2 MB
+[03_SORU] 0.28s | 85.5 KB | CPU: 49% | RAM: +0.0 MB
+[03_CEVAP] 1.44s | 481.0 KB | CPU: 49% | RAM: +0.0 MB
+[04_SORU] 0.39s | 122.0 KB | CPU: 48% | RAM: +0.0 MB
+[04_CEVAP] 1.34s | 392.0 KB | CPU: 44% | RAM: +2.4 MB
+[05_SORU] 0.26s | 77.5 KB | CPU: 48% | RAM: +0.0 MB
+[05_CEVAP] 1.73s | 518.5 KB | CPU: 45% | RAM: +14.1 MB
+
+============================================================
+OZET:
+- Ortalama CPU: 48%
+- Maksimum CPU: 50%
+- Toplam RAM Delta: +181.7 MB
+- Ortalama Synth: 0.90s
+============================================================

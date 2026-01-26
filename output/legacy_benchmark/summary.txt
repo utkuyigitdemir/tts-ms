@@ -1,0 +1,48 @@
+============================================================
+TTS BENCHMARK - LEGACY XTTS v2
+============================================================
+Tarih: 2026-01-26 02:29:06
+Platform: Google Colab (Miniconda Python 3.11)
+GPU: NVIDIA A100-SXM4-40GB
+Model: xtts_v2
+
+PERFORMANS:
+- Init: 0.03s
+- Warmup: 72.17s
+
+SONUCLAR:
+- Toplam: 5 soru
+- Soru Audio: 5/5 basarili (ort: 0.91s)
+- Cevap Audio: 5/5 basarili (ort: 6.08s)
+- Toplam Audio: 4021.9 KB
+
+KAYNAK KULLANIMI:
+- CPU: Ort 8% / Max 9%
+- RAM Delta: +6.1 MB
+- GPU: Ort 32% / Max 42%
+- VRAM Max: 3353 MB
+
+DETAYLAR:
+[01_soru] 0.75s | 97.6KB | CPU:9% | GPU:27% | OK
+    Text: Sizi neden işe almalıyız?
+[01_cevap] 7.40s | 830.6KB | CPU:8% | GPU:42% | OK
+    Text: Güçlü analitik düşünme becerilerim ve takım çalışm...
+[02_soru] 0.86s | 104.1KB | CPU:9% | GPU:26% | OK
+    Text: Siz bizi neden seçtiniz?
+[02_cevap] 5.87s | 674.6KB | CPU:8% | GPU:34% | OK
+    Text: Şirketinizin yenilikçi yaklaşımı ve sektördeki lid...
+[03_soru] 0.94s | 115.1KB | CPU:9% | GPU:28% | OK
+    Text: Kötü özellikleriniz nelerdir?
+[03_cevap] 5.74s | 650.1KB | CPU:8% | GPU:41% | OK
+    Text: Bazen aşırı detaycı olabiliyorum, bu da zaman yöne...
+[04_soru] 1.17s | 139.1KB | CPU:9% | GPU:29% | OK
+    Text: Beş yıl sonra kendinizi nerede görüyorsunuz?
+[04_cevap] 5.04s | 582.6KB | CPU:8% | GPU:40% | OK
+    Text: Beş yıl içinde teknik liderlik pozisyonunda olmayı...
+[05_soru] 0.80s | 104.1KB | CPU:9% | GPU:27% | OK
+    Text: Maaş beklentiniz nedir?
+[05_cevap] 6.33s | 724.1KB | CPU:8% | GPU:27% | OK
+    Text: Piyasa koşullarını ve pozisyonun gerekliliklerini ...
+
+Audio: /content/drive/MyDrive/tts-ms/output/legacy/audio
+============================================================

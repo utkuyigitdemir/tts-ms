@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tts-ms"
+version = "0.1.0"
+description = "Multi-engine Turkish Text-to-Speech Microservice"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "tts-ms contributors"}
+]
+keywords = ["tts", "text-to-speech", "turkish", "fastapi", "microservice"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.23.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "numpy>=1.24.0",
+    "soundfile>=0.12.0",
+    "httpx>=0.24.0",
+    "nest-asyncio>=1.5.0",
+    "python-multipart>=0.0.6",
+    "psutil>=5.9.0",
+]
+
+[project.optional-dependencies]
+# Engine-specific dependencies
+# Note: GPU engines require PyTorch with CUDA installed separately
+legacy = ["coqui-tts>=0.24.0"]  # Python 3.9-3.12
+piper = ["piper-tts>=1.2.0"]    # Python 3.9+, CPU-based
+styletts2 = ["styletts2>=0.1.6"]  # Python 3.9-3.10
+f5tts = ["f5-tts>=1.0.0"]       # Python 3.10+
+chatterbox = ["chatterbox-tts>=0.1.6"]  # Python 3.11 recommended
+cosyvoice = []  # No pip package - requires manual installation from source
+
+# GPU resource monitoring
+gpu = ["pynvml>=11.5.0"]
+
+# Development dependencies
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.1.0",
+]
+
+# All pip-installable engines
+all = ["tts-ms[legacy,piper,styletts2,f5tts,chatterbox,dev]"]
+
+[project.scripts]
+tts-ms = "tts_ms.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/your-org/tts-ms"
+Documentation = "https://github.com/your-org/tts-ms#readme"
+Repository = "https://github.com/your-org/tts-ms"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tts_ms = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]  # Line too long (handled by formatter)
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
