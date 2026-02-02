@@ -57,11 +57,11 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from contextlib import contextmanager, asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from typing import Optional
 
-from tts_ms.core.logging import get_logger, info, warn
+from tts_ms.core.logging import get_logger, info
 
 # Module-level logger
 _LOG = get_logger("tts-ms.concurrency")

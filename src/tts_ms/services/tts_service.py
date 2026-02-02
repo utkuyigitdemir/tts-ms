@@ -37,25 +37,25 @@ Example:
 from __future__ import annotations
 
 import base64
+import builtins
 import os
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Generator, Optional, Any
+from typing import Any, Dict, Generator, Optional
 
-from tts_ms.core.config import Settings, Defaults, TTSServiceConfig
-from tts_ms.core.logging import get_logger, info, success, warn, verbose, debug, fail, error
+from tts_ms.core.config import Settings, TTSServiceConfig
+from tts_ms.core.logging import debug, error, fail, get_logger, info, success, verbose, warn
 from tts_ms.core.metrics import metrics
-from tts_ms.core.resources import get_sampler, resourceit, ResourceSampler, ResourceDelta
-from tts_ms.utils.timeit import timeit
-from tts_ms.utils.text import normalize_tr
-from tts_ms.tts.chunker import chunk_text, chunk_text_breath_groups
-from tts_ms.tts.engine import get_engine, BaseTTSEngine, SynthResult
-from tts_ms.tts.cache import TinyLRUCache, CacheItem
-from tts_ms.tts.storage import try_load_wav, save_wav, get_ttl_manager
-from tts_ms.tts.concurrency import ConcurrencyController, get_controller
+from tts_ms.core.resources import ResourceDelta, ResourceSampler, get_sampler, resourceit
 from tts_ms.tts.batcher import RequestBatcher, get_batcher
-
+from tts_ms.tts.cache import CacheItem, TinyLRUCache
+from tts_ms.tts.chunker import chunk_text, chunk_text_breath_groups
+from tts_ms.tts.concurrency import ConcurrencyController, get_controller
+from tts_ms.tts.engine import BaseTTSEngine, SynthResult, get_engine
+from tts_ms.tts.storage import get_ttl_manager, save_wav, try_load_wav
+from tts_ms.utils.text import normalize_tr
+from tts_ms.utils.timeit import timeit
 
 _LOG = get_logger("tts-ms.service")
 
@@ -794,8 +794,8 @@ class TTSService:
 
         t0 = time.perf_counter()
 
-        for i, chunk_text in enumerate(chunks):
-            key = self._engine.cache_key(chunk_text, speaker, language, request.speaker_wav)
+        for i, chunk_str in enumerate(chunks):
+            key = self._engine.cache_key(chunk_str, speaker, language, request.speaker_wav)
 
             wav_bytes, sr, cache_status = self._check_cache(key)
             t_synth = 0.0
@@ -805,7 +805,7 @@ class TTSService:
                 t1 = time.perf_counter()
                 try:
                     result = self._do_synthesis(
-                        text=chunk_text,
+                        text=chunk_str,
                         speaker=speaker,
                         language=language,
                         speaker_wav=request.speaker_wav,
@@ -912,8 +912,7 @@ class TTSService:
 _service: Optional[TTSService] = None
 _service_lock = threading.Lock()
 
-# Import builtins for TimeoutError distinction
-import builtins
+# Reference builtins.TimeoutError for distinction from asyncio.TimeoutError
 builtins_TimeoutError = builtins.TimeoutError
 
 

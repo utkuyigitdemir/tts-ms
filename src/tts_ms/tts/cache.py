@@ -30,10 +30,10 @@ import threading
 import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Optional, Dict
+from typing import Dict, Optional
 
-from tts_ms.core.logging import get_logger, info, verbose
 from tts_ms.core.config import Defaults
+from tts_ms.core.logging import get_logger, info, verbose
 from tts_ms.utils.timeit import timeit
 
 _LOG = get_logger("tts-ms.cache")

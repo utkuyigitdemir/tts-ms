@@ -70,14 +70,14 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
-from tts_ms.core.logging import get_logger, info, verbose
 from tts_ms.core.config import Defaults
+from tts_ms.core.logging import get_logger, info, verbose
 
 if TYPE_CHECKING:
-    from tts_ms.tts.engine import BaseTTSEngine, SynthResult
     from tts_ms.tts.concurrency import ConcurrencyController
+    from tts_ms.tts.engine import BaseTTSEngine, SynthResult
 
 # Module-level logger
 _LOG = get_logger("tts-ms.batcher")

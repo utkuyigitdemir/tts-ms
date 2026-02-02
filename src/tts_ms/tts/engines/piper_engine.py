@@ -46,7 +46,7 @@ from typing import Optional
 import numpy as np
 
 from tts_ms.core.config import Settings
-from tts_ms.core.logging import info, debug
+from tts_ms.core.logging import debug, info
 from tts_ms.tts.engine import BaseTTSEngine, EngineCapabilities, SynthResult
 from tts_ms.utils.audio import wav_bytes_from_float32
 from tts_ms.utils.timeit import timeit

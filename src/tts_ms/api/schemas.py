@@ -26,8 +26,8 @@ See Also:
     - services/tts_service.py: SynthesizeRequest/SynthesizeResult
 """
 from __future__ import annotations
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 
 # Maximum size for base64-encoded speaker reference audio
 # 10MB base64 ≈ 7.5MB decoded audio (base64 overhead is ~33%)

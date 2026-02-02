@@ -20,8 +20,8 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from tts_ms.api.routes import router, warmup_engine
 from tts_ms.api.openai_compat import router as openai_router
+from tts_ms.api.routes import router, warmup_engine
 from tts_ms.core.logging import configure_logging
 
 

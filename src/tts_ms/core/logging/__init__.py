@@ -54,7 +54,6 @@ Module Structure:
     - formatters.py: JsonlFormatter and ColoredConsoleFormatter
 
 See Also:
-    - CLAUDE.md: Log level documentation
     - services/tts_service.py: Request lifecycle logging
 """
 from __future__ import annotations
@@ -65,25 +64,25 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Optional
 
-# Re-export public API
-from .levels import LogLevel, LEVEL_MAP, LEVEL_NAMES, coerce_level
-from .colors import Colors, supports_color, colorize, get_tag_color
+# Module-level color flag (accessed via getattr for test manipulation)
+from .colors import USE_COLORS as _USE_COLORS  # noqa: F401
+from .colors import Colors, colorize, get_tag_color, supports_color
 from .context import (
-    get_request_id,
-    set_request_id,
     get_level,
-    set_level,
     get_level_name,
-    is_configured,
-    set_configured,
     get_log_config,
-    set_log_config,
+    get_request_id,
+    is_configured,
     read_logging_config,
+    set_configured,
+    set_level,
+    set_log_config,
+    set_request_id,
 )
-from .formatters import JsonlFormatter, ColoredConsoleFormatter
+from .formatters import ColoredConsoleFormatter, JsonlFormatter
 
-# Module-level color flag
-from .colors import USE_COLORS as _USE_COLORS
+# Re-export public API
+from .levels import LEVEL_MAP, LEVEL_NAMES, LogLevel, coerce_level
 
 
 def configure_logging(level: Optional[int | str | LogLevel] = None, force: bool = False) -> None:
@@ -235,8 +234,7 @@ _LEVEL_NAMES = LEVEL_NAMES
 _JsonlFormatter = JsonlFormatter
 _ColoredConsoleFormatter = ColoredConsoleFormatter
 
-# Module-level color flag (can be manipulated by tests)
-_USE_COLORS = supports_color()
+# Module-level color flag (imported from colors module)
 
 
 def _colorize(text: str, color: str) -> str:
@@ -270,6 +268,7 @@ __all__ = [
     "set_request_id",
     "get_level",
     "get_level_name",
+    "get_log_config",
     # Formatters
     "JsonlFormatter",
     "ColoredConsoleFormatter",

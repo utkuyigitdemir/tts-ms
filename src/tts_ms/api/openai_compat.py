@@ -59,12 +59,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from tts_ms.api.dependencies import get_tts_service
-from tts_ms.core.logging import get_logger, set_request_id, info, warn, debug
+from tts_ms.core.logging import debug, get_logger, info, set_request_id, warn
 from tts_ms.services.tts_service import (
-    TTSService,
+    ErrorCode,
     SynthesizeRequest,
     TTSError,
-    ErrorCode,
+    TTSService,
 )
 
 # FastAPI router for OpenAI-compatible endpoint
@@ -398,7 +398,7 @@ def openai_speech(
             status_code=status_map.get(e.code, 500),
         )
 
-    except Exception as e:
+    except Exception:
         # Catch-all for unexpected errors - don't expose internal details
         return _openai_error_response(
             message="Internal server error",

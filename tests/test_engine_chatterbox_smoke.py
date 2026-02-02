@@ -1,5 +1,6 @@
 """Smoke tests for Chatterbox TTS engine."""
 import os
+import sys
 import pytest
 
 pytestmark = pytest.mark.slow
@@ -8,12 +9,15 @@ pytestmark = pytest.mark.slow
 if os.getenv("TTS_MODEL_TYPE", "").lower() != "chatterbox":
     pytest.skip("requires TTS_MODEL_TYPE=chatterbox", allow_module_level=True)
 
+# Chatterbox requires Python 3.11 due to numpy compatibility issues
+if sys.version_info >= (3, 12):
+    pytest.skip("Chatterbox requires Python 3.11 (numpy incompatibility with Python 3.12)", allow_module_level=True)
+
 pytest.importorskip("chatterbox")
 
 
 def test_engine_chatterbox_smoke():
     """Basic smoke test for Chatterbox engine."""
-    import sys
     sys.path.append("src")
 
     from tts_ms.core.config import load_settings
@@ -31,7 +35,6 @@ def test_engine_chatterbox_smoke():
 
 def test_engine_chatterbox_turkish():
     """Test Turkish language synthesis."""
-    import sys
     sys.path.append("src")
 
     from tts_ms.core.config import load_settings
@@ -48,7 +51,6 @@ def test_engine_chatterbox_turkish():
 
 def test_engine_chatterbox_multilingual():
     """Test multilingual capability."""
-    import sys
     sys.path.append("src")
 
     from tts_ms.core.config import load_settings

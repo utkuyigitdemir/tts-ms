@@ -58,7 +58,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from tts_ms.core.config import Settings
 from tts_ms.core.logging import info
-from tts_ms.tts.engine import BaseTTSEngine, EngineCapabilities, SynthResult
+from tts_ms.tts.engine import BaseTTSEngine, SynthResult
 from tts_ms.tts.engines.helpers import call_with_fallback, normalize_audio_output
 from tts_ms.utils.audio import temp_wav_path, wav_bytes_to_float32
 from tts_ms.utils.timeit import timeit

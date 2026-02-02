@@ -686,7 +686,7 @@ Real-world benchmark results on Google Colab:
 
 **XTTS v2** provides **superior audio quality** with voice cloning support.
 
-[View detailed benchmarks](EXAMPLES.md) | [Listen to audio samples](https://innovacomtr-my.sharepoint.com/:f:/g/personal/udemir_innova_com_tr/IgAnllV_7lDiQp4Euj_R4WSIAYqyZBrHslTaup9Wqor0CkQ?e=exqlGp)
+[View detailed benchmarks](docs/EXAMPLES.md) | [Listen to audio samples](https://innovacomtr-my.sharepoint.com/:f:/g/personal/udemir_innova_com_tr/IgAnllV_7lDiQp4Euj_R4WSIAYqyZBrHslTaup9Wqor0CkQ?e=exqlGp)
 
 ---
 
@@ -694,11 +694,11 @@ Real-world benchmark results on Google Colab:
 
 | Document | Description |
 |----------|-------------|
-| [**USAGE.md**](USAGE.md) | Quick reference guide with step-by-step examples |
-| [**DOCUMENTATION.md**](DOCUMENTATION.md) | Complete user manual and API reference |
-| [**WORKFLOW.md**](WORKFLOW.md) | Technical architecture and code flow |
-| [**EXAMPLES.md**](EXAMPLES.md) | Benchmark results and performance analysis |
-| [**CLAUDE.md**](CLAUDE.md) | Development guidelines and project structure |
+| [**USAGE.md**](docs/USAGE.md) | Quick reference guide with step-by-step examples |
+| [**DOCUMENTATION.md**](docs/DOCUMENTATION.md) | Complete user manual and API reference |
+| [**WORKFLOW.md**](docs/WORKFLOW.md) | Technical architecture and code flow |
+| [**EXAMPLES.md**](docs/EXAMPLES.md) | Benchmark results and performance analysis |
+| [**ENGINE_REQUIREMENTS.md**](docs/ENGINE_REQUIREMENTS.md) | Engine-specific test dependencies |
 
 ---
 
@@ -798,8 +798,6 @@ mypy src/
 4. Run tests and linting
 5. Submit a pull request
 
-See [CLAUDE.md](CLAUDE.md) for development guidelines.
-
 ---
 
 ## License
@@ -813,8 +811,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 </p>
 
 <p align="center">
-  <a href="USAGE.md">Quick Start</a> •
-  <a href="DOCUMENTATION.md">Full Docs</a> •
-  <a href="EXAMPLES.md">Benchmarks</a> •
+  <a href="docs/USAGE.md">Quick Start</a> •
+  <a href="docs/DOCUMENTATION.md">Full Docs</a> •
+  <a href="docs/EXAMPLES.md">Benchmarks</a> •
   <a href="https://innovacomtr-my.sharepoint.com/:f:/g/personal/udemir_innova_com_tr/IgAnllV_7lDiQp4Euj_R4WSIAYqyZBrHslTaup9Wqor0CkQ?e=exqlGp">Audio Samples</a>
 </p>

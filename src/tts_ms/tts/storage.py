@@ -73,14 +73,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import threading
 import time
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Dict, Optional
 
-from tts_ms.core.logging import get_logger, info, warn, verbose
 from tts_ms.core.config import Defaults
+from tts_ms.core.logging import get_logger, info, verbose, warn
 from tts_ms.utils.timeit import timeit
 
 # Module-level logger for storage operations

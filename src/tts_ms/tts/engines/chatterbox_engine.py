@@ -59,7 +59,6 @@ from tts_ms.tts.engines.helpers import resolve_device
 from tts_ms.utils.audio import temp_wav_path, wav_bytes_from_float32
 from tts_ms.utils.timeit import timeit
 
-
 # Supported language codes for multilingual model
 SUPPORTED_LANGUAGES = {
     "ar", "da", "de", "el", "en", "es", "fi", "fr", "he", "hi",
@@ -109,10 +108,9 @@ class ChatterboxEngine(BaseTTSEngine):
         if self._loaded:
             return
 
-        try:
-            import torch
-        except ImportError as exc:
-            raise RuntimeError("PyTorch is required for Chatterbox") from exc
+        import importlib.util
+        if importlib.util.find_spec("torch") is None:
+            raise RuntimeError("PyTorch is required for Chatterbox")
 
         device = resolve_device(self._device, self.logger)
         info(self.logger, "loading model", model=self.model_id, device=device, variant=self._variant)

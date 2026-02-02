@@ -42,7 +42,7 @@ import io
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Dict, Tuple, Iterator
+from typing import Dict, Iterator
 
 import numpy as np
 import soundfile as sf

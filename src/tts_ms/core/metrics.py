@@ -64,12 +64,12 @@ from typing import Optional
 # If not installed, all metric operations become no-ops
 try:
     from prometheus_client import (
-        Counter,
-        Histogram,
-        Gauge,
-        CollectorRegistry,
-        generate_latest,
         CONTENT_TYPE_LATEST,
+        CollectorRegistry,
+        Counter,
+        Gauge,
+        Histogram,
+        generate_latest,
     )
     PROMETHEUS_AVAILABLE = True
 except ImportError:

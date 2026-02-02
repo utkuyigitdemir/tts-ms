@@ -50,7 +50,6 @@ from datetime import datetime
 from typing import Any, Dict
 
 from .colors import Colors, get_tag_color
-from .context import get_request_id
 
 
 def _get_use_colors() -> bool:

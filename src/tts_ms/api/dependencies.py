@@ -46,9 +46,8 @@ See Also:
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Generator
 
-from tts_ms.core.config import load_settings, Settings
+from tts_ms.core.config import Settings, load_settings
 from tts_ms.services.tts_service import TTSService, get_service
 
 

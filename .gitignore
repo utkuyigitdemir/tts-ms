@@ -100,9 +100,9 @@ storage_test/
 cli_test_outputs/
 .bootstrap_done
 
-# Claude Code
 .claude/
 claude.md
+CLAUDE.md
 
 # OS
 .DS_Store

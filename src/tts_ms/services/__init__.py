@@ -16,15 +16,15 @@ The TTSService class handles:
     - Resource monitoring
 """
 from .tts_service import (
-    TTSService,
+    ErrorCode,
+    QueueFullError,
+    StreamChunk,
+    SynthesisError,
     SynthesizeRequest,
     SynthesizeResult,
-    StreamChunk,
-    TTSError,
-    SynthesisError,
     TimeoutError,
-    QueueFullError,
-    ErrorCode,
+    TTSError,
+    TTSService,
 )
 
 __all__ = [

@@ -51,7 +51,7 @@ import os
 from contextvars import ContextVar
 from typing import Any, Dict
 
-from .levels import LogLevel, LEVEL_NAMES
+from .levels import LEVEL_NAMES, LogLevel
 
 # Context variable for request ID correlation
 # Uses contextvars for async-safe, per-request storage
