@@ -30,7 +30,7 @@ A production-grade, multi-engine TTS microservice designed for low-latency, real
 
 TTS-MS is a high-performance text-to-speech microservice that provides:
 
-- **Multi-Engine Support** - Choose from 6 different TTS engines (Piper, F5-TTS, CosyVoice, StyleTTS2, Chatterbox, XTTS v2)
+- **Multi-Engine Support** - Choose from 9 different TTS engines (Piper, F5-TTS, CosyVoice, StyleTTS2, Chatterbox, XTTS v2, Kokoro, Qwen3-TTS, VibeVoice)
 - **Unified API** - Single `/v1/tts` endpoint works with any engine
 - **OpenAI Compatibility** - Drop-in replacement via `/v1/audio/speech`
 - **Real-time Streaming** - Server-Sent Events for chunk-by-chunk audio delivery
@@ -56,6 +56,9 @@ TTS-MS is a high-performance text-to-speech microservice that provides:
 | CosyVoice | Yes | Yes | Native | Natural prosody |
 | StyleTTS2 | Yes | No | Limited | Style control |
 | Chatterbox | Yes | Yes | Native | Expressive speech |
+| Kokoro | No (CPU/ONNX) | No | No | CPU-only, preset voices |
+| Qwen3-TTS | Yes (recommended) | Yes | Auto-detect | Preset voices + cloning |
+| VibeVoice | Yes (required) | Yes | Auto-detect | Research, high-quality |
 
 ---
 
@@ -107,6 +110,15 @@ pip install -e ".[styletts2]"
 
 # Chatterbox (GPU required)
 pip install -e ".[chatterbox]"
+
+# Kokoro (CPU-only, ONNX)
+pip install -e ".[kokoro]"
+
+# Qwen3-TTS (GPU recommended)
+pip install -e ".[qwen3tts]"
+
+# VibeVoice (GPU required)
+pip install -e ".[vibevoice]"
 ```
 
 ### 2.4 Verify Installation
@@ -259,8 +271,8 @@ Content-Type: application/json
 | `model` | string | No | "tts-1" | Model name (ignored, uses configured engine) |
 | `input` | string | Yes | - | Text to synthesize (1-4096 chars) |
 | `voice` | string | No | "alloy" | Voice: alloy, echo, fable, onyx, nova, shimmer |
-| `response_format` | string | No | "wav" | Format: wav, mp3, opus, aac, flac, pcm |
-| `speed` | number | No | 1.0 | Speed multiplier (0.25-4.0) |
+| `response_format` | string | No | "wav" | Format: wav, mp3, opus, aac, flac, pcm (**Note:** currently only WAV is fully supported; other formats are accepted but return WAV audio) |
+| `speed` | number | No | 1.0 | Speed multiplier (0.25-4.0) (**Note:** accepted but not yet implemented; audio is always generated at 1.0x speed) |
 
 **Example Request**
 
@@ -514,7 +526,7 @@ Configuration is loaded from multiple sources with the following priority (highe
 
 | Variable | Values | Default | Description |
 |----------|--------|---------|-------------|
-| `TTS_MODEL_TYPE` | piper, legacy, f5tts, cosyvoice, styletts2, chatterbox | - | TTS engine to use |
+| `TTS_MODEL_TYPE` | piper, legacy, f5tts, cosyvoice, styletts2, chatterbox, kokoro, qwen3tts, vibevoice | - | TTS engine to use |
 | `TTS_DEVICE` | cuda, cpu | cuda | Compute device |
 | `TTS_HOME` | path | system default | Model cache directory |
 
@@ -524,6 +536,7 @@ Configuration is loaded from multiple sources with the following priority (highe
 |----------|--------|---------|-------------|
 | `TTS_MS_LOG_LEVEL` | 1, 2, 3, 4 | 2 | Log verbosity |
 | `TTS_MS_NO_COLOR` | 0, 1 | 0 | Disable colored output |
+| `TTS_MS_RUNS_DIR` | path | `./runs` | Per-run log directory |
 
 **Log Levels:**
 - **1 (MINIMAL)** - Startup, shutdown, critical errors
@@ -544,6 +557,8 @@ Configuration is loaded from multiple sources with the following priority (highe
 | Variable | Values | Default | Description |
 |----------|--------|---------|-------------|
 | `TTS_MS_SKIP_WARMUP` | 0, 1 | 0 | Skip engine warmup (testing only) |
+| `TTS_MS_AUTO_INSTALL` | 0, 1 | 0 | Auto-install missing pip packages |
+| `TTS_MS_SKIP_SETUP` | 0, 1 | 0 | Skip engine requirement checks (testing only) |
 
 ### 6.3 YAML Configuration (config/settings.yaml)
 
@@ -594,8 +609,9 @@ chunking:
 # Logging
 logging:
   level: 2                            # 1-4 (MINIMAL to DEBUG)
-  log_dir: "./logs"                   # Log directory
-  jsonl_file: "tts-ms.jsonl"          # JSON log file
+  runs_dir: "./runs"                  # Per-run log directory (recommended)
+  # log_dir: "./logs"                 # Legacy single-file mode
+  jsonl_file: "tts-ms.jsonl"          # JSON log file (legacy mode only)
   text_preview_chars: 80              # Text preview length
 
 # Resource Monitoring
@@ -657,6 +673,28 @@ tts:
     variant: "turbo"
     cfg_weight: 0.5
     exaggeration: 0.5
+
+# Kokoro Engine (CPU/ONNX)
+tts:
+  kokoro:
+    model_path: "models/kokoro/kokoro-v1.0.onnx"
+    voices_path: "models/kokoro/voices-v1.0.bin"
+    voice: "af_sarah"
+    speed: 1.0
+    lang: "en-us"
+
+# Qwen3-TTS Engine
+tts:
+  qwen3tts:
+    model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
+    speaker: "Vivian"
+    dtype: "bfloat16"
+
+# VibeVoice Engine
+tts:
+  vibevoice:
+    model_id: "microsoft/VibeVoice-1.5B"
+    max_new_tokens: 2048
 ```
 
 ---
@@ -887,6 +925,132 @@ tts:
     cfg_weight: 0.5               # 0.3-0.5 recommended
     exaggeration: 0.5             # Expressiveness (0.0-0.7+)
     reference_audio_path: null    # Optional default reference
+```
+
+---
+
+### 7.7 Kokoro (CPU/ONNX)
+
+**Overview**
+
+Kokoro is a fast, CPU-friendly TTS engine using ONNX Runtime. It requires no GPU and supports multiple preset voices.
+
+**Features**
+- CPU-only inference via ONNX Runtime
+- Multiple preset voices (af_sarah, af_heart, am_adam, etc.)
+- Language selection support
+- Fast synthesis (~2s for typical text)
+
+**Configuration**
+
+```yaml
+tts:
+  engine: "kokoro"
+  kokoro:
+    model_path: "models/kokoro/kokoro-v1.0.onnx"
+    voices_path: "models/kokoro/voices-v1.0.bin"
+    voice: "af_sarah"          # Default preset voice
+    speed: 1.0                 # Speed multiplier
+    lang: "en-us"              # Language (en-us, en-gb, ja, zh, fr, ko, es, etc.)
+```
+
+**Model Setup**
+
+Download model files from HuggingFace:
+```bash
+pip install kokoro-onnx huggingface-hub
+python -c "from huggingface_hub import hf_hub_download; \
+  hf_hub_download('onnx-community/Kokoro-82M-v1.0-ONNX', 'kokoro-v1.0.onnx', local_dir='models/kokoro'); \
+  hf_hub_download('onnx-community/Kokoro-82M-v1.0-ONNX', 'voices-v1.0.bin', local_dir='models/kokoro')"
+```
+
+**Usage**
+
+```bash
+export TTS_MODEL_TYPE=kokoro
+python -m uvicorn tts_ms.main:app --host 0.0.0.0 --port 8000
+```
+
+---
+
+### 7.8 Qwen3-TTS (GPU)
+
+**Overview**
+
+Qwen3-TTS is Alibaba's TTS model that supports both preset speaker voices and voice cloning from reference audio.
+
+**Features**
+- Preset speakers (Vivian, Serena, Ethan, Chelsie)
+- Voice cloning from reference audio
+- Multi-language support with automatic detection
+- ~3-4 GB VRAM for 0.6B model
+
+**Configuration**
+
+```yaml
+tts:
+  engine: "qwen3tts"
+  qwen3tts:
+    model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
+    speaker: "Vivian"          # Default preset speaker
+    dtype: "bfloat16"          # bfloat16, float16, or float32
+```
+
+**Preset Speakers**
+- Vivian
+- Serena
+- Ethan
+- Chelsie
+
+**Voice Cloning**
+
+```json
+{
+  "text": "Clone this voice",
+  "speaker_wav_b64": "BASE64_ENCODED_AUDIO"
+}
+```
+
+**Usage**
+
+```bash
+export TTS_MODEL_TYPE=qwen3tts
+python -m uvicorn tts_ms.main:app --host 0.0.0.0 --port 8000
+```
+
+---
+
+### 7.9 VibeVoice (GPU)
+
+**Overview**
+
+VibeVoice is Microsoft's research TTS model using a diffusion-based architecture. It always uses reference audio for synthesis (a silent reference is substituted when none is provided).
+
+**Features**
+- High-quality voice cloning
+- Multi-language support (auto-detect)
+- ~7 GB VRAM for 1.5B model
+- Research-only license
+
+**Configuration**
+
+```yaml
+tts:
+  engine: "vibevoice"
+  vibevoice:
+    model_id: "microsoft/VibeVoice-1.5B"
+    max_new_tokens: 2048        # Maximum generation length
+```
+
+**License Warning**
+
+VibeVoice uses a research-only license. Check Microsoft's license terms before commercial deployment.
+
+**Usage**
+
+```bash
+export TTS_MODEL_TYPE=vibevoice
+python -m uvicorn tts_ms.main:app --host 0.0.0.0 --port 8000
 ```
 
 ---
@@ -1244,6 +1408,19 @@ storage:
 | VERBOSE | 3 | Per-stage timing, detailed flow |
 | DEBUG | 4 | Internal state, full tracing |
 
+**Per-Run Log Directories**
+
+Each server run creates an isolated directory under `runs/`:
+```
+runs/
+└── run_143005_26022026_a1b2c3/    # run_HHMMSS_DDMMYYYY_hex
+    ├── app.jsonl                   # All log records
+    ├── resources.jsonl             # Resource metrics only (CPU/RAM/GPU)
+    └── run_info.json               # Run metadata (engine, level, PID)
+```
+
+Configure via `TTS_MS_RUNS_DIR` or `logging.runs_dir` in settings.yaml. Falls back to legacy single-file mode (`log_dir`) if `runs_dir` is not set.
+
 **Log Format (Console)**
 
 ```
@@ -1393,14 +1570,24 @@ ls -la ./storage
 ### 12.4 Log Analysis
 
 ```bash
-# View recent logs
-tail -f logs/tts-ms.jsonl | jq
+# Per-run mode — find the latest run
+ls -t runs/ | head -1
+# e.g. run_143005_26022026_a1b2c3
+
+# View all logs from a run
+tail -f runs/run_143005_26022026_a1b2c3/app.jsonl | jq
+
+# View resource metrics only
+cat runs/run_143005_26022026_a1b2c3/resources.jsonl | jq
 
 # Filter by request ID
-grep "abc123" logs/tts-ms.jsonl | jq
+grep "abc123" runs/run_*/app.jsonl | jq
 
-# Find errors
-grep '"tag":"ERROR"' logs/tts-ms.jsonl | jq
+# Find errors across all runs
+grep '"tag":"ERROR"' runs/run_*/app.jsonl | jq
+
+# Legacy single-file mode
+tail -f logs/tts-ms.jsonl | jq
 ```
 
 ---
@@ -1414,11 +1601,14 @@ grep '"tag":"ERROR"' logs/tts-ms.jsonl | jq
 | Use Case | Recommended Engine |
 |----------|-------------------|
 | CPU-only / lightweight | Piper |
+| CPU-only / preset voices | Kokoro |
 | General purpose | XTTS v2 (Legacy) |
-| Voice cloning | F5-TTS or XTTS v2 |
+| Voice cloning | F5-TTS, XTTS v2, or Qwen3-TTS |
 | Natural prosody | CosyVoice |
 | Style control | StyleTTS2 |
 | Expressive speech | Chatterbox |
+| Preset voices + cloning | Qwen3-TTS |
+| Research / high-quality | VibeVoice |
 
 **Q: Can I switch engines without changing client code?**
 
@@ -1426,7 +1616,15 @@ Yes. The `/v1/tts` API is engine-agnostic. Just change `TTS_MODEL_TYPE` and rest
 
 **Q: Is Turkish supported?**
 
-Yes. All engines support Turkish, though quality varies. Piper has dedicated Turkish models, and XTTS v2 / CosyVoice have native Turkish support.
+Not all engines support Turkish natively. Turkish support by engine:
+
+| Turkish Support | Engines |
+|----------------|---------|
+| **Native** | Piper (tr_TR model), XTTS v2 (Legacy), Chatterbox |
+| **Via reference audio** | F5-TTS (voice cloning with Turkish ref) |
+| **Not supported** | Kokoro, StyleTTS2, CosyVoice, Qwen3-TTS, VibeVoice |
+
+For Turkish-focused deployments, Piper (CPU) and XTTS v2 (GPU) are recommended.
 
 ### Performance
 
@@ -1446,11 +1644,14 @@ Yes. All engines support Turkish, though quality varies. Piper has dedicated Tur
 | Engine | VRAM Required |
 |--------|---------------|
 | Piper | None (CPU) |
+| Kokoro | None (CPU/ONNX) |
 | XTTS v2 | 4-6 GB |
 | F5-TTS | 6-8 GB |
-| CosyVoice | 4-6 GB |
+| CosyVoice | 6-8 GB |
 | StyleTTS2 | 4-6 GB |
 | Chatterbox | 4-6 GB |
+| Qwen3-TTS | 3-4 GB |
+| VibeVoice | ~7 GB |
 
 ### Integration
 
@@ -1530,4 +1731,4 @@ Configure custom mappings in `settings.yaml`.
 ---
 
 **Version:** 1.0.0
-**Last Updated:** January 2026
+**Last Updated:** February 2026

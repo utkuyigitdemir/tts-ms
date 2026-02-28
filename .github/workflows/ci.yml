@@ -43,6 +43,7 @@ jobs:
         env:
           TTS_MS_NO_COLOR: "1"
           TTS_MS_SKIP_WARMUP: "1"
+          TTS_MS_SKIP_SETUP: "1"
         run: |
           pytest -q -m "not slow" --tb=short
 

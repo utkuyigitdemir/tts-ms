@@ -44,7 +44,7 @@ _LOG = get_logger("tts-ms.text")
 
 # Version string for cache key invalidation
 # Increment when normalization algorithm changes
-NORMALIZE_VERSION = "v1"
+NORMALIZE_VERSION = "v2"
 
 # Regex patterns for text normalization
 _WS_RE = re.compile(r"\s+")  # Multiple whitespace characters
@@ -57,6 +57,51 @@ _SPACE_AFTER_OPEN = re.compile(r'([(\[{"\'])\s+')
 
 # Fix closing bracket spacing: "word )" -> "word)"
 _SPACE_BEFORE_CLOSE = re.compile(r'\s+([)\]}"\'])')
+
+
+_TR_ONES = {
+    "0": "sıfır", "1": "bir", "2": "iki", "3": "üç", "4": "dört",
+    "5": "beş", "6": "altı", "7": "yedi", "8": "sekiz", "9": "dokuz"
+}
+_TR_TENS = {
+    "1": "on", "2": "yirmi", "3": "otuz", "4": "kırk", "5": "elli",
+    "6": "altmış", "7": "yetmiş", "8": "seksen", "9": "doksan"
+}
+
+_ABBREVIATIONS = {
+    "dr.": "doktor",
+    "prof.": "profesör",
+    "doç.": "doçent",
+    "av.": "avukat",
+    "mk.": "marka",
+    "vb.": "ve benzeri",
+    "vd.": "ve diğerleri",
+    "vs.": "vesaire",
+}
+
+_NUMBERS_2DIGIT_RE = re.compile(r"\b\d{1,2}\b")
+_DATE_RE = re.compile(r"\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b")
+
+def _spell_number_0_to_99(num_str: str) -> str:
+    num = int(num_str)
+    if num < 10:
+        return _TR_ONES[str(num)]
+    elif num < 100:
+        tens = _TR_TENS[num_str[0]]
+        if num_str[1] == "0":
+            return tens
+        return tens + " " + _TR_ONES[num_str[1]]
+    return num_str
+
+def _replace_numbers(match: re.Match) -> str:
+    val = match.group(0)
+    return _spell_number_0_to_99(str(int(val)))
+
+def _expand_abbreviations(text: str) -> str:
+    for abbr, expanded in _ABBREVIATIONS.items():
+        pattern = r"(?i)\b" + re.escape(abbr) + r"(?=\s|$|[.,!?;:])"
+        text = re.sub(pattern, lambda m: expanded.capitalize() if m.group(0)[0].isupper() else expanded, text)
+    return text
 
 
 def normalize_tr(text: str) -> tuple[str, Dict[str, float]]:
@@ -85,8 +130,12 @@ def normalize_tr(text: str) -> tuple[str, Dict[str, float]]:
     timings: Dict[str, float] = {}
 
     with timeit("normalize") as t:
-        # Step 1: Strip leading/trailing whitespace
         s = text.strip()
+
+        # New steps for normalizations: abbreviations, dates, numbers
+        s = _expand_abbreviations(s)
+        s = _DATE_RE.sub(r"\1 \2 \3", s)
+        s = _NUMBERS_2DIGIT_RE.sub(_replace_numbers, s)
 
         # Step 2: Collapse multiple whitespace to single space
         s = _WS_RE.sub(" ", s)

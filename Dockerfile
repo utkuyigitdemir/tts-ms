@@ -4,107 +4,212 @@
 # Build examples:
 #   docker build --build-arg TTS_MODEL_TYPE=piper -t tts-ms:piper .
 #   docker build --build-arg TTS_MODEL_TYPE=legacy -t tts-ms:legacy .
+#   docker build --build-arg TTS_MODEL_TYPE=f5tts -t tts-ms:f5tts .
+#   docker build --build-arg TTS_MODEL_TYPE=styletts2 -t tts-ms:styletts2 .
 #   docker build --build-arg TTS_MODEL_TYPE=chatterbox -t tts-ms:chatterbox .
+#   docker build --build-arg TTS_MODEL_TYPE=kokoro -t tts-ms:kokoro .
+#   docker build --build-arg TTS_MODEL_TYPE=qwen3tts -t tts-ms:qwen3tts .
+#   docker build --build-arg TTS_MODEL_TYPE=vibevoice -t tts-ms:vibevoice .
 #
 # Run examples:
 #   docker run -p 8000:8000 tts-ms:piper
 #   docker run -p 8000:8000 --gpus all tts-ms:legacy
-#   docker run -p 8000:8000 --gpus all tts-ms:chatterbox
+#   docker run -p 8000:8000 --gpus all -e TTS_MS_LOG_LEVEL=4 tts-ms:f5tts
+#
+# Dev mode (code changes without rebuild):
+#   docker run -p 8000:8000 \
+#     -v ./src:/app/src -v ./config:/app/config \
+#     -v ~/.cache/huggingface:/root/.cache/huggingface \
+#     tts-ms:qwen3tts
 
-ARG PYTHON_VERSION=3.12
 ARG TTS_MODEL_TYPE=piper
 
 # =============================================================================
-# Stage 1: Base image with Python
+# Stage 1: Base image with system dependencies
 # =============================================================================
-FROM python:${PYTHON_VERSION}-slim as base
-
-# Set environment variables
+FROM python:3.12-slim AS base-3.12
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libsndfile1 \
     ffmpeg \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 
+FROM python:3.11-slim AS base-3.11
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libsndfile1 \
+    ffmpeg \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+
+FROM python:3.10-slim AS base-3.10
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libsndfile1 \
+    ffmpeg \
+    sox \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # =============================================================================
-# Stage 2: Builder - install Python dependencies
+# Stage 2: Engine-specific builds
+#
+# Layer order optimized for cache: pyproject.toml + stub -> deps -> src/
+# Only the final COPY src/ layer is invalidated on code changes.
 # =============================================================================
-FROM base as builder
 
-# Copy dependency files
-COPY pyproject.toml requirements.txt ./
-COPY requirements_*.txt ./
+# -----------------------------------------------------------------------------
+# Piper (Python 3.12, CPU-only)
+# -----------------------------------------------------------------------------
+FROM base-3.12 AS engine-piper
+COPY pyproject.toml ./
+RUN mkdir -p src/tts_ms && touch src/tts_ms/__init__.py
+RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir piper-tts
+# Download Piper models (Turkish + English)
+COPY scripts/download_models.sh ./
+RUN chmod +x download_models.sh && ./download_models.sh piper
+COPY src/ ./src/
 
-# Install base dependencies
-RUN pip install --no-cache-dir -e . || pip install --no-cache-dir \
-    fastapi \
-    uvicorn[standard] \
-    pydantic \
-    pyyaml \
-    numpy \
-    soundfile \
-    httpx \
-    nest-asyncio \
-    python-multipart
+# -----------------------------------------------------------------------------
+# Legacy XTTS v2 (Python 3.12, GPU recommended)
+# -----------------------------------------------------------------------------
+FROM base-3.12 AS engine-legacy
+COPY pyproject.toml ./
+RUN mkdir -p src/tts_ms && touch src/tts_ms/__init__.py
+RUN pip install --no-cache-dir torch==2.5.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu118 || \
+    pip install --no-cache-dir torch==2.5.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir coqui-tts
+COPY src/ ./src/
 
-# =============================================================================
-# Stage 3: Engine-specific dependencies
-# =============================================================================
-FROM builder as engine-piper
-RUN pip install --no-cache-dir piper-tts || echo "Piper installation skipped"
-# Download Turkish piper model
-RUN mkdir -p /app/models/piper && \
-    pip install --no-cache-dir requests && \
-    python -c "import requests; \
-    r = requests.get('https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/tr/tr_TR/dfki/medium/tr_TR-dfki-medium.onnx'); \
-    open('/app/models/piper/tr_TR.onnx', 'wb').write(r.content); \
-    r = requests.get('https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/tr/tr_TR/dfki/medium/tr_TR-dfki-medium.onnx.json'); \
-    open('/app/models/piper/tr_TR.json', 'wb').write(r.content)"
+# -----------------------------------------------------------------------------
+# F5-TTS (Python 3.12, GPU recommended)
+# -----------------------------------------------------------------------------
+FROM base-3.12 AS engine-f5tts
+COPY pyproject.toml ./
+RUN mkdir -p src/tts_ms && touch src/tts_ms/__init__.py
+RUN pip install --no-cache-dir torch==2.5.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu118 || \
+    pip install --no-cache-dir torch==2.5.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir f5-tts edge-tts
+COPY src/ ./src/
 
-FROM builder as engine-legacy
-RUN pip install --no-cache-dir coqui-tts || echo "Coqui-TTS installation may need manual setup"
+# -----------------------------------------------------------------------------
+# StyleTTS2 (Python 3.12, GPU recommended, requires espeak-ng)
+# -----------------------------------------------------------------------------
+FROM base-3.12 AS engine-styletts2
+RUN apt-get update && apt-get install -y --no-install-recommends espeak-ng && rm -rf /var/lib/apt/lists/*
+COPY pyproject.toml ./
+RUN mkdir -p src/tts_ms && touch src/tts_ms/__init__.py
+RUN pip install --no-cache-dir torch==2.5.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu118 || \
+    pip install --no-cache-dir torch==2.5.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir styletts2
+RUN python -c "import nltk; nltk.download('punkt_tab')"
+COPY src/ ./src/
 
-FROM builder as engine-cosyvoice
-# CosyVoice requires manual installation from source
-RUN echo "CosyVoice requires manual installation"
+# -----------------------------------------------------------------------------
+# Chatterbox (Python 3.11 required, GPU recommended)
+# -----------------------------------------------------------------------------
+FROM base-3.11 AS engine-chatterbox
+COPY pyproject.toml ./
+RUN mkdir -p src/tts_ms && touch src/tts_ms/__init__.py
+RUN pip install --no-cache-dir torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118 || \
+    pip install --no-cache-dir torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir chatterbox-tts
+COPY src/ ./src/
 
-FROM builder as engine-styletts2
-# StyleTTS2 requires manual installation from source
-RUN echo "StyleTTS2 requires manual installation"
-
-FROM builder as engine-f5tts
-# F5-TTS requires manual installation from source
-RUN echo "F5-TTS requires manual installation"
-
-FROM builder as engine-chatterbox
-# Chatterbox TTS - requires GPU for best performance
+# -----------------------------------------------------------------------------
+# CosyVoice (Python 3.10 required, GPU recommended)
+# -----------------------------------------------------------------------------
+FROM base-3.10 AS engine-cosyvoice
+COPY pyproject.toml ./
+RUN mkdir -p src/tts_ms && touch src/tts_ms/__init__.py
 RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu118 || \
-    pip install --no-cache-dir torch torchaudio
-RUN pip install --no-cache-dir chatterbox-tts || echo "Chatterbox installation may need manual setup"
+    pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -e .
+# CosyVoice requires git clone + deps. GPU-only and build-failing pkgs stripped from requirements.txt
+RUN pip install --no-cache-dir setuptools
+RUN git clone --depth 1 --recurse-submodules https://github.com/FunAudioLLM/CosyVoice /opt/CosyVoice && \
+    cd /opt/CosyVoice && \
+    sed -i '/tensorrt/d; /deepspeed/d; /onnxruntime-gpu/d; /extra-index-url/d; s/torch==2.3.1/torch/; s/torchaudio==2.3.1/torchaudio/; /openai-whisper/d' requirements.txt && \
+    pip install --no-cache-dir -r requirements.txt
+# Ensure critical deps are installed (ruamel.yaml pinned for HyperPyYAML compat)
+RUN pip install --no-cache-dir "ruamel.yaml<0.19" onnxruntime==1.18.0
+RUN pip install --no-cache-dir openai-whisper==20231117 || pip install --no-cache-dir openai-whisper
+ENV PYTHONPATH="/opt/CosyVoice:/opt/CosyVoice/third_party/Matcha-TTS"
+COPY src/ ./src/
+
+# -----------------------------------------------------------------------------
+# Kokoro (Python 3.12, CPU-only, ONNX)
+# -----------------------------------------------------------------------------
+FROM base-3.12 AS engine-kokoro
+COPY pyproject.toml ./
+RUN mkdir -p src/tts_ms && touch src/tts_ms/__init__.py
+RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir kokoro-onnx
+# Download Kokoro model files from GitHub releases (not HuggingFace)
+COPY scripts/download_models.sh ./
+RUN chmod +x download_models.sh && ./download_models.sh kokoro
+COPY src/ ./src/
+
+# -----------------------------------------------------------------------------
+# Qwen3-TTS (Python 3.12, GPU recommended)
+# -----------------------------------------------------------------------------
+FROM base-3.12 AS engine-qwen3tts
+COPY pyproject.toml ./
+RUN mkdir -p src/tts_ms && touch src/tts_ms/__init__.py
+RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu118 || \
+    pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -e .
+# Install qwen-tts (pulls transformers<5 which it needs), then restore CUDA torch
+RUN pip install --no-cache-dir qwen-tts && \
+    (pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu118 || true)
+COPY src/ ./src/
+
+# -----------------------------------------------------------------------------
+# VibeVoice (Python 3.12, GPU required)
+# -----------------------------------------------------------------------------
+FROM base-3.12 AS engine-vibevoice
+COPY pyproject.toml ./
+RUN mkdir -p src/tts_ms && touch src/tts_ms/__init__.py
+RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu118 || \
+    pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -e .
+# Install vibevoice (pulls transformers<5 which it needs), then restore CUDA torch
+RUN pip install --no-cache-dir vibevoice && \
+    (pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu118 || true)
+COPY src/ ./src/
 
 # =============================================================================
-# Stage 4: Runtime image
+# Stage 3: Runtime image
 # =============================================================================
-FROM engine-${TTS_MODEL_TYPE} as runtime
+FROM engine-${TTS_MODEL_TYPE} AS runtime
 
 ARG TTS_MODEL_TYPE
 ENV TTS_MODEL_TYPE=${TTS_MODEL_TYPE}
 
-# Copy application code
-COPY src/ ./src/
+# Copy config
 COPY config/ ./config/
-COPY pyproject.toml ./
-
-# Install the package
-RUN pip install --no-cache-dir -e .
 
 # Create directories for logs and storage
 RUN mkdir -p /app/logs /app/storage
@@ -112,8 +217,9 @@ RUN mkdir -p /app/logs /app/storage
 # Set runtime environment
 ENV TZ=Europe/Istanbul \
     TTS_MS_LOG_LEVEL=2 \
-    TTS_MS_LOG_DIR=/app/logs \
-    TTS_MS_NO_COLOR=1
+    TTS_MS_NO_COLOR=1 \
+    TTS_MS_RESOURCES_ENABLED=1 \
+    TTS_MS_SKIP_SETUP=1
 
 # Declare volumes for persistence
 VOLUME ["/app/logs", "/app/storage"]
@@ -123,7 +229,7 @@ EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import httpx; r = httpx.get('http://localhost:8000/health'); exit(0 if r.status_code == 200 else 1)"
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the server
 ENTRYPOINT ["python", "-m", "uvicorn"]

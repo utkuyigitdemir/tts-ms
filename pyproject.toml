@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Multi-engine Turkish Text-to-Speech Microservice"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 authors = [
     {name = "tts-ms contributors"}
 ]
@@ -18,6 +18,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Multimedia :: Sound/Audio :: Speech",
@@ -45,6 +46,9 @@ styletts2 = ["styletts2>=0.1.6"]  # Python 3.9-3.10
 f5tts = ["f5-tts>=1.0.0"]       # Python 3.10+
 chatterbox = ["chatterbox-tts>=0.1.6"]  # Python 3.11 recommended
 cosyvoice = []  # No pip package - requires manual installation from source
+kokoro = ["kokoro-onnx>=0.4.0"]       # Python 3.10+, CPU-based ONNX
+qwen3tts = ["qwen-tts>=0.1.0"]        # Python 3.10+, GPU recommended
+vibevoice = ["vibevoice>=0.1.0"]       # Python 3.10+, GPU required
 
 # GPU resource monitoring
 gpu = ["pynvml>=11.5.0"]
@@ -57,7 +61,7 @@ dev = [
 ]
 
 # All pip-installable engines
-all = ["tts-ms[legacy,piper,styletts2,f5tts,chatterbox,dev]"]
+all = ["tts-ms[legacy,piper,styletts2,f5tts,chatterbox,kokoro,qwen3tts,vibevoice,dev]"]
 
 [project.scripts]
 tts-ms = "tts_ms.cli:main"

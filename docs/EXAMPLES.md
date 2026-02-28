@@ -9,11 +9,11 @@ This document presents real-world benchmark results from TTS-MS engines, analyzi
 ## Table of Contents
 
 1. [Benchmark Overview](#1-benchmark-overview)
-2. [Piper Engine Results](#2-piper-engine-results)
-3. [Legacy XTTS v2 Results](#3-legacy-xtts-v2-results)
-4. [Comparative Analysis](#4-comparative-analysis)
+2. [Piper Engine Results (Colab)](#2-piper-engine-results)
+3. [Legacy XTTS v2 Results (Colab)](#3-legacy-xtts-v2-results)
+4. [Comparative Analysis (Piper vs XTTS v2)](#4-comparative-analysis)
 5. [Resource Efficiency Analysis](#5-resource-efficiency-analysis)
-6. [Recommendations](#6-recommendations)
+6. [All 9 Engines - CPU Benchmarks](#additional-engine-results-cpu-benchmarks)
 
 ---
 
@@ -279,78 +279,112 @@ The larger audio size for XTTS v2 indicates higher sample rate (24kHz vs 22kHz) 
 
 ---
 
-## 6. Recommendations
+## Appendix A: Colab Benchmark Data
 
-### When to Use Piper
-
-- **High-throughput applications** requiring fast response times
-- **CPU-only environments** (edge devices, containers without GPU)
-- **Cost-sensitive deployments** where GPU costs are prohibitive
-- **Real-time conversational AI** with strict latency requirements
-- **Batch processing** of large text volumes
-
-### When to Use XTTS v2 (Legacy)
-
-- **Quality-critical applications** where natural speech is paramount
-- **Voice cloning** requirements (custom voice from reference audio)
-- **Multi-language support** with native Turkish
-- **Applications with GPU availability** (cloud instances, on-premise servers)
-- **Lower request volume** where latency is acceptable
-
-### Deployment Recommendations
-
-| Use Case | Recommended Engine | Reasoning |
-|----------|-------------------|-----------|
-| IVR/Call Center | Piper | High throughput, consistent latency |
-| Virtual Assistant | XTTS v2 | Natural conversation quality |
-| Audiobook Generation | XTTS v2 | Extended listening requires quality |
-| Real-time Streaming | Piper | Low latency, predictable performance |
-| Voice Cloning | XTTS v2 | Only option with cloning support |
-| Edge Deployment | Piper | CPU-only, small footprint |
-
-### Scaling Considerations
-
-**Piper Scaling:**
-- Horizontal: Add more CPU instances
-- Vertical: Use machines with more cores
-- Expected: Linear scaling with CPU cores
-
-**XTTS v2 Scaling:**
-- Horizontal: Add more GPU instances
-- Vertical: Increase `max_concurrent` (2-3 per A100)
-- Expected: Sub-linear scaling due to VRAM constraints
-
----
-
-## Appendix: Raw Data Files
-
-The complete benchmark data is available in the `output/` directory:
+The original Piper and XTTS v2 benchmarks above were run on Google Colab. Raw data files:
 
 ```
 output/
 ├── piper_benchmark/
 │   ├── summary.txt      # Human-readable summary
 │   ├── results.json     # Machine-readable results
-│   ├── resource.log     # Step-by-step resource log
 │   └── audio/           # Generated audio files
-│       ├── 01_soru.wav
-│       ├── 01_cevap.wav
-│       └── ...
 └── legacy_benchmark/
     ├── summary.txt
     ├── results.json
-    ├── resource.log
     └── audio/
-        ├── 01_soru.wav
-        ├── 01_cevap.wav
-        └── ...
 ```
 
 ---
 
-## Additional Engine Results
+## Additional Engine Results (CPU Benchmarks)
 
-*Results for additional engines (F5-TTS, CosyVoice, StyleTTS2, Chatterbox) will be added as benchmarks are completed.*
+All 9 engines were benchmarked on a 22-core CPU machine (no GPU) on 2026-02-26. The same 5 Turkish interview question-answer pairs were used where supported; English-only engines ran 10 English tests.
+
+### All Engines Summary
+
+| Engine | Startup | Tests | Pass | Avg Time | Total Time | Audio Output | Turkish |
+|--------|---------|-------|------|----------|------------|-------------|---------|
+| **Piper** | 3.8s | 20 | 20 | 0.27s | 5.3s | 130.6s playback | Yes |
+| **Kokoro** | 3.1s | 10 | 10 | 1.85s | 18.5s | 68.8s playback | No |
+| **StyleTTS2** | 106.3s | 10 | 10 | 8.43s | 84.3s | 79.8s playback | No |
+| **Legacy XTTS v2** | 188.4s | 20 | 20 | 12.04s | 240.7s | 150.4s playback | Yes |
+| **Chatterbox** | 261.4s | 20 | 20 | 32.46s | 649.2s | 119.8s playback | Yes |
+| **CosyVoice** | 54.0s | 10 | 10 | 53.97s | 539.7s | 67.4s playback | No |
+| **F5-TTS** | 351.2s | 10 | 10 | 92.11s | 921.1s | 67.1s playback | No |
+| **VibeVoice** | 450.9s | 10 | 10 | 198.07s | 1980.7s | 112.1s playback | No |
+| **Qwen3-TTS** | 194.5s | 10 | 3 | 320.87s | 3208.7s | 7.0s playback | No |
+
+> **Note:** CPU percentages are raw psutil values (0-2200% range for 22 cores). Engines marked "No" for Turkish ran English-only tests. Qwen3-TTS had 7 timeout failures on CPU — it is designed for GPU.
+
+### Resource Usage Comparison
+
+| Engine | Avg CPU | Peak CPU | Avg RAM Delta | Peak RAM Delta |
+|--------|---------|----------|---------------|----------------|
+| **Piper** | 836.9% | 874.6% | +16.4 MB | +129.8 MB |
+| **Kokoro** | 865.4% | 876.9% | +0.0 MB | +0.0 MB |
+| **StyleTTS2** | 501.7% | 566.9% | +109.2 MB | +597.1 MB |
+| **Legacy XTTS v2** | 590.2% | 600.2% | +21.0 MB | +161.2 MB |
+| **Chatterbox** | 594.4% | 610.8% | +31.4 MB | +345.8 MB |
+| **CosyVoice** | 606.9% | 613.6% | -9.8 MB | +78.2 MB |
+| **F5-TTS** | 579.3% | 583.0% | +9.5 MB | +132.7 MB |
+| **VibeVoice** | 502.5% | 535.5% | +0.6 MB | +1.9 MB |
+| **Qwen3-TTS** | 202.3% | 233.4% | -403.1 MB | +198.9 MB |
+
+### Per-Engine Notes
+
+**Kokoro** — CPU-only ONNX engine. Fast startup (3.1s), good throughput (~37 chars/s). English-only, no Turkish. Preset voices only (af_sarah, am_adam, etc.).
+
+**StyleTTS2** — English-only with style transfer. Moderate speed on CPU (8.43s avg). Highest RAM delta (+597 MB peak) due to model architecture.
+
+**Chatterbox** — Expressive speech with paralinguistics. Supports Turkish natively. Slower startup (261s) but acceptable synthesis time (32s avg on CPU).
+
+**CosyVoice** — Natural prosody engine. English-only in current test setup. Moderate CPU performance (54s avg). Requires Python 3.10.
+
+**F5-TTS** — Voice cloning model. Slowest-to-start engine (351s). Very slow on CPU (92s avg) — designed for GPU. English-only (requires Turkish reference audio for TR).
+
+**VibeVoice** — Microsoft research model. Extremely slow on CPU (198s avg, 451s startup). Peak RAM only +1.9 MB (efficient memory management). English-only in tests.
+
+**Qwen3-TTS** — Alibaba model. Only 3/10 tests passed on CPU (7 timed out). CPU is insufficient for this engine — GPU is required for practical use.
+
+---
+
+## 6. Recommendations
+
+(Updated with all 9 engines)
+
+### Deployment Recommendations
+
+| Use Case | Recommended Engine | Reasoning |
+|----------|-------------------|-----------|
+| IVR/Call Center | Piper | High throughput, consistent latency, CPU-only |
+| Virtual Assistant | XTTS v2 or Chatterbox | Natural conversation quality with Turkish |
+| Audiobook Generation | XTTS v2 or VibeVoice | Extended listening requires quality (GPU) |
+| Real-time Streaming | Piper or Kokoro | Low latency, predictable performance |
+| Voice Cloning | F5-TTS, CosyVoice, Chatterbox, XTTS v2, Qwen3-TTS, or VibeVoice | 6 engines support cloning |
+| Edge Deployment | Piper or Kokoro | CPU-only, small footprint |
+| Style/Expressiveness | StyleTTS2 or Chatterbox | Style transfer and paralinguistics |
+| Multilingual (non-TR) | CosyVoice or Qwen3-TTS | Broad language support |
+
+---
+
+## Appendix: Raw Data Files
+
+The complete benchmark data is available in the `results/` directory:
+
+```
+results/
+├── summary.txt           # Multi-engine summary
+├── piper/                # Per-engine detailed results
+├── kokoro/
+├── legacy/
+├── f5tts/
+├── styletts2/
+├── chatterbox/
+├── cosyvoice/
+├── qwen3tts/
+└── vibevoice/
+```
 
 ---
 
@@ -358,4 +392,4 @@ output/
 
 ---
 
-*Last Updated: January 2026*
+*Last Updated: February 2026*

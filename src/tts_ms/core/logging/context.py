@@ -49,7 +49,8 @@ from __future__ import annotations
 
 import os
 from contextvars import ContextVar
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 from .levels import LEVEL_NAMES, LogLevel
 
@@ -62,6 +63,10 @@ _request_id: ContextVar[str] = ContextVar("request_id", default="-")
 _configured: bool = False           # Whether logging has been configured
 _log_config: Dict[str, Any] = {}    # Current logging configuration
 _current_level: LogLevel = LogLevel.NORMAL  # Current log level
+
+# Per-run state
+_run_id: str = ""
+_run_dir: Optional[Path] = None
 
 
 def get_request_id() -> str:
@@ -116,6 +121,28 @@ def get_level_name() -> str:
         Level name string ("MINIMAL", "NORMAL", "VERBOSE", or "DEBUG").
     """
     return LEVEL_NAMES.get(_current_level, "NORMAL")
+
+
+def get_run_id() -> str:
+    """Get current run ID (empty string if not set)."""
+    return _run_id
+
+
+def set_run_id(rid: str) -> None:
+    """Set current run ID."""
+    global _run_id
+    _run_id = rid
+
+
+def get_run_dir() -> Optional[Path]:
+    """Get current run directory (None if not set)."""
+    return _run_dir
+
+
+def set_run_dir(path: Optional[Path]) -> None:
+    """Set current run directory."""
+    global _run_dir
+    _run_dir = path
 
 
 def is_configured() -> bool:
@@ -194,8 +221,10 @@ def read_logging_config() -> Dict[str, Any]:
     # Environment overrides (take precedence over settings file)
     if os.getenv("TTS_MS_LOG_LEVEL"):
         cfg["level"] = os.environ["TTS_MS_LOG_LEVEL"]
-    if os.getenv("TTS_MS_LOG_DIR"):
-        cfg["log_dir"] = os.environ["TTS_MS_LOG_DIR"]
+    if "TTS_MS_RUNS_DIR" in os.environ:
+        cfg["runs_dir"] = os.environ["TTS_MS_RUNS_DIR"]  # Empty string disables
+    if "TTS_MS_LOG_DIR" in os.environ:
+        cfg["log_dir"] = os.environ["TTS_MS_LOG_DIR"]  # Empty string disables
     if os.getenv("TTS_MS_JSONL_FILE"):
         cfg["jsonl_file"] = os.environ["TTS_MS_JSONL_FILE"]
     if os.getenv("TTS_MS_LOG_ROTATE_BYTES"):

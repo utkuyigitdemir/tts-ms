@@ -1,0 +1,43 @@
+# VibeVoice - Microsoft's Research TTS Model
+# Python: >=3.10
+# GPU: CUDA required (~7 GB VRAM for 1.5B model)
+# Disk: ~3-5GB for model download
+# License: Research-only (check Microsoft's terms before commercial use)
+#
+# Source: https://huggingface.co/microsoft/VibeVoice-1.5B
+# PyPI: https://pypi.org/project/vibevoice/
+
+# PyTorch with CUDA (install first, match your CUDA version)
+# Colab (CUDA 12.1):
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# Main package
+vibevoice>=0.1.0
+
+# Optional: ffmpeg for non-WAV reference audio processing
+# Ubuntu/Debian: sudo apt-get install ffmpeg
+# Colab: !apt-get install -y ffmpeg
+
+# =============================================================================
+# COLAB INSTALLATION
+# =============================================================================
+#
+# !pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+# !pip install vibevoice
+# !apt-get install -y ffmpeg
+#
+# =============================================================================
+# USAGE EXAMPLE
+# =============================================================================
+#
+# from vibevoice import VibeVoice
+# model = VibeVoice.from_pretrained("microsoft/VibeVoice-1.5B", device="cuda")
+# wav = model.generate("Hello, this is a test.", speaker_wav=reference_audio)
+#
+# =============================================================================
+
+# Preset speakers: Alice, Frank, Mary, Carter, Enrique, Eric
+# Voice cloning from reference audio (always required, silence used as fallback)
+# Model auto-downloads from HuggingFace on first run

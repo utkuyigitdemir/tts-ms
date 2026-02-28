@@ -12,6 +12,9 @@ Available Engines:
     - StyleTTS2Engine: GPU, diffusion-based high-quality synthesis
     - CosyVoiceEngine: Alibaba's multilingual TTS
     - ChatterboxEngine: ResembleAI's emotional TTS
+    - KokoroEngine: CPU-only ONNX, multiple preset voices
+    - Qwen3TTSEngine: Alibaba's Qwen3-TTS with voice cloning
+    - VibeVoiceEngine: Microsoft's research TTS model
     - DynamicBackendEngine: Fallback for custom backends
 
 Lazy Loading:
@@ -55,6 +58,9 @@ __all__ = [
     "F5TTSEngine",
     "CosyVoiceEngine",
     "ChatterboxEngine",
+    "KokoroEngine",
+    "Qwen3TTSEngine",
+    "VibeVoiceEngine",
 ]
 
 # Lazy imports to avoid loading heavy dependencies (PyTorch, etc.)
@@ -90,6 +96,15 @@ def __getattr__(name: str):
     if name == "ChatterboxEngine":
         from tts_ms.tts.engines.chatterbox_engine import ChatterboxEngine
         return ChatterboxEngine
+    if name == "KokoroEngine":
+        from tts_ms.tts.engines.kokoro_engine import KokoroEngine
+        return KokoroEngine
+    if name == "Qwen3TTSEngine":
+        from tts_ms.tts.engines.qwen3tts_engine import Qwen3TTSEngine
+        return Qwen3TTSEngine
+    if name == "VibeVoiceEngine":
+        from tts_ms.tts.engines.vibevoice_engine import VibeVoiceEngine
+        return VibeVoiceEngine
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -98,6 +113,9 @@ if TYPE_CHECKING:
     from tts_ms.tts.engines.cosyvoice_engine import CosyVoiceEngine
     from tts_ms.tts.engines.dynamic_backend import DynamicBackendEngine
     from tts_ms.tts.engines.f5tts_engine import F5TTSEngine
+    from tts_ms.tts.engines.kokoro_engine import KokoroEngine
     from tts_ms.tts.engines.legacy_engine import LegacyXTTSEngine
     from tts_ms.tts.engines.piper_engine import PiperEngine
+    from tts_ms.tts.engines.qwen3tts_engine import Qwen3TTSEngine
     from tts_ms.tts.engines.styletts2_engine import StyleTTS2Engine
+    from tts_ms.tts.engines.vibevoice_engine import VibeVoiceEngine

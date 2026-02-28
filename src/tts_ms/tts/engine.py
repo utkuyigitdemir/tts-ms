@@ -16,18 +16,28 @@ Engine Selection:
         - styletts2: StyleTTS2 (GPU, diffusion-based)
         - cosyvoice: CosyVoice (GPU, Alibaba)
         - chatterbox: Chatterbox (GPU, ResembleAI)
+        - kokoro: Kokoro TTS (CPU, ONNX)
+        - qwen3tts: Qwen3-TTS (GPU, Alibaba)
+        - vibevoice: VibeVoice (GPU, Microsoft)
+
+Automatic Setup:
+    The factory automatically checks engine requirements at startup.
+    Set TTS_MS_AUTO_INSTALL=1 to enable automatic pip package installation.
+    Set TTS_MS_SKIP_SETUP=1 to skip requirement checks entirely.
 
 Implementing a New Engine:
     1. Create engines/<name>_engine.py
     2. Inherit from BaseTTSEngine
     3. Implement load() and synthesize()
     4. Register in _create_engine() function
+    5. Add requirements to core/engine_setup.py ENGINE_REGISTRY
 """
 from __future__ import annotations
 
 import os
+import threading
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from tts_ms.core.config import Settings
 from tts_ms.core.logging import get_logger, warn
@@ -65,6 +75,19 @@ class SynthResult:
     wav_bytes: bytes
     sample_rate: int
     timings_s: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
+class SynthesizeRequest:
+    """
+    A single synthesis request for batch processing.
+    """
+    text: str
+    speaker: Optional[str] = None
+    language: Optional[str] = None
+    speaker_wav: Optional[bytes] = None
+    split_sentences: Optional[bool] = None
+
 
 
 class BaseTTSEngine:
@@ -170,6 +193,34 @@ class BaseTTSEngine:
         """
         raise NotImplementedError
 
+    def synthesize_batch(
+        self,
+        requests: List[SynthesizeRequest],
+    ) -> List[SynthResult]:
+        """
+        Synthesize a batch of requests.
+
+        Default implementation loops sequentially over requests.
+        Engines that support true batching should override this.
+
+        Args:
+            requests: List of SynthesizeRequest objects.
+
+        Returns:
+            List of SynthResult objects corresponding to the requests.
+        """
+        results = []
+        for req in requests:
+            res = self.synthesize(
+                text=req.text,
+                speaker=req.speaker,
+                language=req.language,
+                speaker_wav=req.speaker_wav,
+                split_sentences=req.split_sentences,
+            )
+            results.append(res)
+        return results
+
     def _settings_blob(self) -> Dict[str, object]:
         """
         Get a dictionary of settings that affect synthesis output.
@@ -234,6 +285,7 @@ class BaseTTSEngine:
 
 _ENGINE: Optional[BaseTTSEngine] = None
 _ENGINE_TYPE: Optional[str] = None
+_ENGINE_LOCK = threading.Lock()
 
 
 def _resolve_engine_type(settings: Settings) -> str:
@@ -270,6 +322,7 @@ def _create_engine(engine_type: str, settings: Settings) -> BaseTTSEngine:
     Create a TTS engine instance.
 
     Uses lazy imports to avoid loading unused engine dependencies.
+    Automatically checks and optionally installs engine requirements.
 
     Args:
         engine_type: Canonical engine type name.
@@ -280,7 +333,13 @@ def _create_engine(engine_type: str, settings: Settings) -> BaseTTSEngine:
 
     Raises:
         ValueError: If engine_type is unknown.
+        RuntimeError: If engine requirements are not satisfied.
     """
+    # Check and setup engine requirements
+    from tts_ms.core.engine_setup import ensure_engine_ready
+    auto_install = os.getenv("TTS_MS_AUTO_INSTALL") == "1"
+    ensure_engine_ready(engine_type, auto_install=auto_install)
+
     if engine_type == "legacy":
         from tts_ms.tts.engines.legacy_engine import LegacyXTTSEngine
         return LegacyXTTSEngine(settings)
@@ -304,6 +363,18 @@ def _create_engine(engine_type: str, settings: Settings) -> BaseTTSEngine:
     if engine_type == "chatterbox":
         from tts_ms.tts.engines.chatterbox_engine import ChatterboxEngine
         return ChatterboxEngine(settings)
+
+    if engine_type == "kokoro":
+        from tts_ms.tts.engines.kokoro_engine import KokoroEngine
+        return KokoroEngine(settings)
+
+    if engine_type == "qwen3tts":
+        from tts_ms.tts.engines.qwen3tts_engine import Qwen3TTSEngine
+        return Qwen3TTSEngine(settings)
+
+    if engine_type == "vibevoice":
+        from tts_ms.tts.engines.vibevoice_engine import VibeVoiceEngine
+        return VibeVoiceEngine(settings)
 
     raise ValueError(f"Unknown engine type: {engine_type}")
 
@@ -330,10 +401,13 @@ def get_engine(settings: Settings) -> BaseTTSEngine:
 
     engine_type = _normalize_engine_type(_resolve_engine_type(settings))
 
-    # Create new engine if none exists or type changed
+    # Double-checked locking to prevent race condition where two threads
+    # both see _ENGINE is None and create duplicate engine instances
     if _ENGINE is None or _ENGINE_TYPE != engine_type:
-        _ENGINE = _create_engine(engine_type, settings)
-        _ENGINE_TYPE = engine_type
+        with _ENGINE_LOCK:
+            if _ENGINE is None or _ENGINE_TYPE != engine_type:
+                _ENGINE = _create_engine(engine_type, settings)
+                _ENGINE_TYPE = engine_type
 
     # Warn if engine name doesn't match expected type
     if _ENGINE.name != engine_type:

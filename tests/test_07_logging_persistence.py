@@ -7,13 +7,14 @@ def test_logging_jsonl_persistence(monkeypatch):
     from uuid import uuid4
 
     sys.path.append("src")
-    from tts_ms.core.logging import configure_logging, get_logger, set_request_id, info
+    from tts_ms.core.logging import configure_logging, get_logger, info, set_request_id
 
     base_dir = Path("logs_test") / str(uuid4())
     base_dir.mkdir(parents=True, exist_ok=True)
 
     monkeypatch.setenv("TTS_MS_LOG_DIR", str(base_dir))
     monkeypatch.setenv("TTS_MS_JSONL_FILE", "test.jsonl")
+    monkeypatch.setenv("TTS_MS_RUNS_DIR", "")
 
     try:
         configure_logging(force=True)

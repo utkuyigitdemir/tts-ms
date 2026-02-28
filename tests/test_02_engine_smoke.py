@@ -1,4 +1,5 @@
 import pytest
+
 pytestmark = pytest.mark.slow
 
 def test_engine_load_warmup_and_synthesize():

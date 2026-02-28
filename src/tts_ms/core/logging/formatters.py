@@ -82,6 +82,19 @@ def _colorize_for_formatter(text: str, color: str) -> str:
     return f"{color}{text}{Colors.RESET}"
 
 
+RESOURCE_KEYS = {"cpu_percent", "ram_delta_mb", "gpu_percent", "gpu_vram_delta_mb"}
+
+
+class ResourceFilter(logging.Filter):
+    """Only pass log records whose extra_data contains resource metric keys."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        extra = getattr(record, "extra_data", None)
+        if not extra or not isinstance(extra, dict):
+            return False
+        return bool(RESOURCE_KEYS & extra.keys())
+
+
 class JsonlFormatter(logging.Formatter):
     """
     Format log records as JSON Lines for file output.

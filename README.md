@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/TTS--MS-Production%20Ready-brightgreen?style=for-the-badge" alt="Production Ready">
-  <img src="https://img.shields.io/badge/Engines-6%20Supported-blue?style=for-the-badge" alt="6 Engines">
+  <img src="https://img.shields.io/badge/Engines-9%20Supported-blue?style=for-the-badge" alt="9 Engines">
   <img src="https://img.shields.io/badge/Turkish-Native%20Support-red?style=for-the-badge" alt="Turkish Support">
   <img src="https://img.shields.io/badge/OpenAI-Compatible-orange?style=for-the-badge" alt="OpenAI Compatible">
 </p>
@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  A production-ready, high-performance TTS microservice featuring 6 interchangeable engines,<br>
+  A production-ready, high-performance TTS microservice featuring 9 interchangeable engines,<br>
   real-time streaming, intelligent caching, and seamless OpenAI API compatibility.
 </p>
 
@@ -31,7 +31,7 @@
 
 | Challenge | TTS-MS Solution |
 |-----------|-----------------|
-| **Vendor Lock-in** | 6 interchangeable engines with unified API |
+| **Vendor Lock-in** | 9 interchangeable engines with unified API |
 | **High Latency** | Two-tier caching + breath-group chunking |
 | **GPU Memory Issues** | Smart concurrency control + one-model-per-process |
 | **Integration Complexity** | OpenAI-compatible API - zero code changes |
@@ -43,7 +43,7 @@
 ## Highlights
 
 ```
- 6 TTS Engines          Piper • XTTS v2 • F5-TTS • CosyVoice • StyleTTS2 • Chatterbox
+ 9 TTS Engines          Piper • XTTS v2 • F5-TTS • CosyVoice • StyleTTS2 • Chatterbox • Kokoro • Qwen3-TTS • VibeVoice
  3 API Endpoints         Native • OpenAI-Compatible • SSE Streaming
  2-Tier Caching         In-Memory LRU + Persistent Disk Storage
  Real-time Streaming    Server-Sent Events with chunk-by-chunk delivery
@@ -63,6 +63,12 @@
 # Install
 git clone https://github.com/your-org/tts-ms.git && cd tts-ms
 pip install -e .
+
+# Check available engines and their status
+tts-ms --engines
+
+# Setup a specific engine (auto-checks dependencies)
+tts-ms --setup piper
 
 # Run with Piper (CPU)
 export TTS_MODEL_TYPE=piper
@@ -353,7 +359,7 @@ Timeline:
 **Zero-Shot Cloning**
 - 10-30 seconds reference audio
 - Base64-encoded in request
-- Supported: F5-TTS, CosyVoice, Chatterbox, XTTS v2
+- Supported: F5-TTS, CosyVoice, Chatterbox, XTTS v2, Qwen3-TTS, VibeVoice
 
 </td>
 <td width="50%">
@@ -386,12 +392,18 @@ response = requests.post("/v1/tts", json={
 | **CosyVoice** | Yes | Yes | Native | Excellent | ⚡⚡ | Natural prosody, Multilingual |
 | **StyleTTS2** | Yes | - | Limited | Excellent | ⚡⚡ | Style control, Expressive |
 | **Chatterbox** | Yes | Yes | Native | Excellent | ⚡⚡ | Expressive, Paralinguistics |
+| **Kokoro** | - | - | - | Good | ⚡⚡⚡⚡ | CPU-only, Preset voices, ONNX |
+| **Qwen3-TTS** | Yes | Yes | Auto | Excellent | ⚡⚡ | Preset voices, Voice cloning |
+| **VibeVoice** | Yes | Yes | Auto | Excellent | ⚡⚡ | Research, High-quality cloning |
 
 ### Engine Selection Guide
 
 ```bash
 # CPU-only, maximum speed
 export TTS_MODEL_TYPE=piper
+
+# CPU-only, preset voices (ONNX)
+export TTS_MODEL_TYPE=kokoro
 
 # GPU, best Turkish support
 export TTS_MODEL_TYPE=legacy
@@ -407,6 +419,45 @@ export TTS_MODEL_TYPE=styletts2
 
 # GPU, expressive speech
 export TTS_MODEL_TYPE=chatterbox
+
+# GPU, preset voices + voice cloning
+export TTS_MODEL_TYPE=qwen3tts
+
+# GPU, high-quality research model
+export TTS_MODEL_TYPE=vibevoice
+```
+
+### Multi-Environment Setup
+
+Different engines require different Python versions:
+
+| Environment | Python | Engines |
+|-------------|--------|---------|
+| `tts` | 3.12 | Piper, F5-TTS, StyleTTS2, Legacy XTTS v2, Kokoro, Qwen3-TTS, VibeVoice |
+| `tts311` | 3.11 | Chatterbox |
+| `tts310` | 3.10 | CosyVoice |
+
+```bash
+# Check engine requirements
+tts-ms --engines
+
+# Setup with auto-install
+tts-ms --setup f5tts --auto-install
+
+# Or enable auto-install globally
+export TTS_MS_AUTO_INSTALL=1
+```
+
+The system automatically detects Python version mismatches and provides clear instructions:
+```
+RuntimeError: Engine 'chatterbox' requirements not satisfied.
+
+Chatterbox (ResembleAI): Python 3.12 exceeds maximum 3.11
+
+To fix, create the correct environment:
+  conda create -n tts311 python=3.11 -y
+  conda activate tts311
+  pip install -e /path/to/tts-ms
 ```
 
 ---
@@ -615,6 +666,22 @@ Console output:
 14:30:06 [ OK    ] (abc123) synthesis_complete duration=0.05s
 ```
 
+**Per-Run Log Directories**
+
+Each server run creates an isolated log directory under `runs/`:
+```
+runs/
+└── run_143005_26022026_a1b2c3/
+    ├── app.jsonl          # All log records
+    ├── resources.jsonl    # Resource metrics only (CPU/RAM/GPU)
+    └── run_info.json      # Run metadata (engine, level, PID)
+```
+
+Configure via environment variable or settings.yaml:
+```bash
+export TTS_MS_RUNS_DIR=./runs
+```
+
 ### Resource Monitoring
 
 ```bash
@@ -636,12 +703,18 @@ resources_summary cpu_percent=45.2 ram_delta_mb=12.3 gpu_percent=78.5 vram_delta
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `TTS_MODEL_TYPE` | Engine: piper, legacy, f5tts, cosyvoice, styletts2, chatterbox | - |
+| `TTS_MODEL_TYPE` | Engine: piper, legacy, f5tts, cosyvoice, styletts2, chatterbox, kokoro, qwen3tts, vibevoice | - |
 | `TTS_DEVICE` | Compute device: cuda, cpu | cuda |
 | `TTS_MS_LOG_LEVEL` | Log verbosity: 1-4 | 2 |
 | `TTS_MS_SKIP_WARMUP` | Skip engine warmup (testing) | 0 |
 | `TTS_MS_NO_COLOR` | Disable colored output | 0 |
+| `TTS_HOME` | Model cache directory | system default |
+| `TTS_MS_RUNS_DIR` | Per-run log directory | `./runs` |
 | `TTS_MS_RESOURCES_ENABLED` | Enable resource monitoring | 1 |
+| `TTS_MS_RESOURCES_PER_STAGE` | Log per-stage resources (VERBOSE) | 1 |
+| `TTS_MS_RESOURCES_SUMMARY` | Log resource summary (NORMAL) | 1 |
+| `TTS_MS_AUTO_INSTALL` | Auto-install missing pip packages | 0 |
+| `TTS_MS_SKIP_SETUP` | Skip engine requirement checks | 0 |
 
 ### YAML Configuration
 
@@ -669,22 +742,32 @@ chunking:
   use_breath_groups: true
   first_chunk_max: 80
   rest_chunk_max: 180
+
+logging:
+  level: 2
+  runs_dir: "./runs"              # Per-run log directories
+  # log_dir: "./logs"             # Legacy single-file mode
 ```
 
 ---
 
 ## Benchmarks
 
-Real-world benchmark results on Google Colab:
+All 9 engines benchmarked on a 22-core CPU machine (2026-02-26):
 
-| Engine | Platform | Warmup | Avg Synthesis | Throughput |
-|--------|----------|--------|---------------|------------|
-| **Piper** | CPU (2 cores) | 4.75s | 0.90s | 85 chars/s |
-| **XTTS v2** | A100 40GB | 72.17s | 3.50s | 25 chars/s |
+| Engine | Startup | Avg Synthesis | Tests | Turkish | Notes |
+|--------|---------|---------------|-------|---------|-------|
+| **Piper** | 3.8s | 0.27s | 20/20 | Yes | CPU-native, fastest |
+| **Kokoro** | 3.1s | 1.85s | 10/10 | No | CPU-only ONNX |
+| **StyleTTS2** | 106.3s | 8.43s | 10/10 | No | English, style transfer |
+| **XTTS v2** | 188.4s | 12.04s | 20/20 | Yes | Voice cloning |
+| **Chatterbox** | 261.4s | 32.46s | 20/20 | Yes | Expressive speech |
+| **CosyVoice** | 54.0s | 53.97s | 10/10 | No | Natural prosody |
+| **F5-TTS** | 351.2s | 92.11s | 10/10 | No | Voice cloning model |
+| **VibeVoice** | 450.9s | 198.07s | 10/10 | No | Research model |
+| **Qwen3-TTS** | 194.5s | 320.87s | 3/10 | No | Needs GPU |
 
-**Piper** delivers **3.4x higher throughput** with CPU-only operation.
-
-**XTTS v2** provides **superior audio quality** with voice cloning support.
+> Engines without Turkish support ran English-only tests (10 instead of 20). All tests on CPU — GPU engines will be significantly faster with CUDA.
 
 [View detailed benchmarks](docs/EXAMPLES.md) | [Listen to audio samples](https://innovacomtr-my.sharepoint.com/:f:/g/personal/udemir_innova_com_tr/IgAnllV_7lDiQp4Euj_R4WSIAYqyZBrHslTaup9Wqor0CkQ?e=exqlGp)
 
@@ -698,6 +781,7 @@ Real-world benchmark results on Google Colab:
 | [**DOCUMENTATION.md**](docs/DOCUMENTATION.md) | Complete user manual and API reference |
 | [**WORKFLOW.md**](docs/WORKFLOW.md) | Technical architecture and code flow |
 | [**EXAMPLES.md**](docs/EXAMPLES.md) | Benchmark results and performance analysis |
+| [**ENGINE_ENVIRONMENTS.md**](docs/ENGINE_ENVIRONMENTS.md) | Multi-environment setup guide |
 | [**ENGINE_REQUIREMENTS.md**](docs/ENGINE_REQUIREMENTS.md) | Engine-specific test dependencies |
 
 ---
@@ -727,7 +811,7 @@ Real-world benchmark results on Google Colab:
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │                      TTSService                              │    │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │    │
-│  │  │Normalize │─▶│  Chunk   │─▶│  Cache   │─▶│Synthestic│    │    │
+│  │  │Normalize │─▶│  Chunk   │─▶│  Cache   │─▶│Synthesize│    │    │
 │  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │                          │                                           │
@@ -740,8 +824,9 @@ Real-world benchmark results on Google Colab:
 │                          │                                           │
 │                          ▼                                           │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │                     TTS Engine                               │    │
-│  │   Piper │ XTTS v2 │ F5-TTS │ CosyVoice │ StyleTTS2 │ Chat   │    │
+│  │                        TTS Engine                          │    │
+│  │  Piper │ XTTS v2 │ F5-TTS │ CosyVoice │ StyleTTS2        │    │
+│  │  Chatterbox │ Kokoro │ Qwen3-TTS │ VibeVoice              │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -765,6 +850,11 @@ tts-ms --text "Long text..." --dry-run --json
 
 # Force CPU
 tts-ms --text "Test" --device cpu --out test.wav
+
+# Engine management
+tts-ms --engines                      # List all engines and status
+tts-ms --setup piper                  # Check engine requirements
+tts-ms --setup f5tts --auto-install   # Setup with auto pip install
 ```
 
 ---
@@ -776,7 +866,8 @@ tts-ms --text "Test" --device cpu --out test.wav
 pip install -e ".[dev]"
 
 # Run tests (excluding slow GPU tests)
-pytest -q -m "not slow"
+TTS_MODEL_TYPE=piper pytest -q -m "not slow"
+# Result: ~470 passed, ~10 skipped
 
 # Run specific test
 pytest -q tests/test_09_logging_levels.py
@@ -807,7 +898,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  <sub>Built with FastAPI • Powered by 6 TTS Engines • Optimized for Turkish</sub>
+  <sub>Built with FastAPI • Powered by 9 TTS Engines • Optimized for Turkish</sub>
 </p>
 
 <p align="center">

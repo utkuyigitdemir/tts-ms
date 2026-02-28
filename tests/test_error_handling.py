@@ -14,11 +14,11 @@ Tests cover:
 import pytest
 
 from tts_ms.services.tts_service import (
-    TTSError,
+    ErrorCode,
+    QueueFullError,
     SynthesisError,
     TimeoutError,
-    QueueFullError,
-    ErrorCode,
+    TTSError,
 )
 
 

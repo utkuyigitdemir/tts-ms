@@ -1,0 +1,19 @@
+INTERVIEW_QUESTIONS = [
+    "Why should we hire you? I am the most suitable candidate for this position because I have both technical knowledge and a tendency for teamwork. I achieved successful results in my previous projects and I believe I can add value to your company.",
+
+    "Why did you choose us? Your company's innovative approach and leading position in the industry impressed me greatly. Additionally, the value you place on your employees and career development opportunities played an important role in my choice.",
+
+    "What are the qualities you see as weaknesses in yourself? Sometimes I can be overly detail-oriented and this can extend the completion time of projects. However, I am applying time management techniques to better manage this trait.",
+
+    "Where do you see yourself in five years? In five years, I see myself as someone who has specialized in this field and transitioned into team leadership. I also want to contribute to the development of the industry.",
+
+    "What is your salary expectation? Taking into account market conditions and the requirements of the position, I expect a fair salary appropriate to my experience. I am flexible on the figure and open to evaluation based on the company's budget."
+]
+
+QUESTION_TITLES = [
+    "Why should we hire you",
+    "Why did you choose us",
+    "Your weaknesses",
+    "5 years from now",
+    "Salary expectation"
+]

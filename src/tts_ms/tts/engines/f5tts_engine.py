@@ -40,9 +40,12 @@ See Also:
 """
 from __future__ import annotations
 
+import asyncio
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from tts_ms.core.config import Settings
+from tts_ms.core.logging import info, warn
 from tts_ms.tts.engine import EngineCapabilities
 from tts_ms.tts.engines.dynamic_backend import DynamicBackendEngine
 
@@ -66,8 +69,59 @@ class F5TTSEngine(DynamicBackendEngine):
     _model_id_key = "checkpoint_path"
     _default_model_id = "f5tts"
 
+    _DEFAULT_REF_TEXT = "Merhaba, bu varsayılan referans sesidir."
+    _DEFAULT_REF_VOICE = "tr-TR-EmelNeural"
+
     def __init__(self, settings: Settings):
         super().__init__(settings)
+        self._default_ref_path: Optional[str] = self._cfg.get("reference_audio_path")
+        self._default_ref_text: str = self._DEFAULT_REF_TEXT
+
+    def load(self) -> None:
+        """Load F5-TTS model and ensure default reference audio exists."""
+        super().load()
+        if not self._default_ref_path:
+            self._default_ref_path = self._ensure_default_reference()
+
+    def _ensure_default_reference(self) -> Optional[str]:
+        """Generate default Turkish reference audio using edge-tts."""
+        ref_dir = Path.home() / ".cache" / "tts-ms" / "f5tts"
+        ref_path = ref_dir / "default_tr_ref.mp3"
+
+        if ref_path.exists():
+            info(self.logger, "using cached default reference", path=str(ref_path))
+            return str(ref_path)
+
+        try:
+            import edge_tts
+        except ImportError:
+            warn(
+                self.logger, "edge_tts_not_installed",
+                message="Install edge-tts for automatic reference audio: pip install edge-tts",
+            )
+            return None
+
+        try:
+            ref_dir.mkdir(parents=True, exist_ok=True)
+            info(self.logger, "generating default Turkish reference audio")
+            communicate = edge_tts.Communicate(self._DEFAULT_REF_TEXT, self._DEFAULT_REF_VOICE)
+            # Use a dedicated event loop in a thread to avoid crashing when called
+            # from within an existing async context (e.g., FastAPI lifespan)
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if loop and loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    pool.submit(asyncio.run, communicate.save(str(ref_path))).result()
+            else:
+                asyncio.run(communicate.save(str(ref_path)))
+            info(self.logger, "default reference generated", path=str(ref_path))
+            return str(ref_path)
+        except Exception as exc:
+            warn(self.logger, "ref_generation_failed", error=str(exc))
+            return None
 
     def _get_backend_module_candidates(self) -> List[str]:
         return ["f5_tts.api", "f5_tts"]
@@ -118,39 +172,26 @@ class F5TTSEngine(DynamicBackendEngine):
         wav_array: Optional[Any],
         gen_cfg: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
-        # F5-TTS API: infer(ref_audio, ref_text, gen_text, ...)
-        # ref_text is the transcript of reference audio (can be empty for auto-transcription)
-        ref_text = ""  # Let F5-TTS auto-transcribe
+        # F5-TTS requires reference audio — fall back to default Turkish reference
+        ref_file = wav_path_str or self._default_ref_path
+        if not ref_file:
+            raise RuntimeError(
+                "F5-TTS requires reference audio. Provide speaker_wav in request "
+                "or install edge-tts for automatic Turkish reference generation."
+            )
+        # Use known transcript for default ref, empty string for user-provided audio
+        ref_text = self._default_ref_text if ref_file == self._default_ref_path else ""
         return [
-            # Standard F5-TTS API with positional-like kwargs
             {
-                "ref_file": wav_path_str,
+                "ref_file": ref_file,
                 "ref_text": ref_text,
                 "gen_text": text,
                 **gen_cfg,
             },
-            # Alternative with ref_audio
             {
-                "ref_audio": wav_path_str or wav_array,
+                "ref_audio": ref_file,
                 "ref_text": ref_text,
                 "gen_text": text,
-                **gen_cfg,
-            },
-            # Legacy format
-            {
-                "text": text,
-                "speaker": speaker,
-                "language": language,
-                "ref_audio": wav_path_str or wav_array,
-                "ref_audio_path": wav_path_str,
-                "speaker_wav": wav_array,
-                **gen_cfg,
-            },
-            {
-                "text": text,
-                "spk": speaker,
-                "lang": language,
-                "prompt_audio": wav_path_str or wav_array,
                 **gen_cfg,
             },
         ]

@@ -18,10 +18,13 @@ def _parse_sse_events(text: str):
     return events
 
 def test_stream_returns_meta_and_chunk():
-    import sys, json, base64
+    import base64
+    import json
+    import sys
     sys.path.append("src")
 
     from fastapi.testclient import TestClient
+
     from tts_ms.main import create_app
 
     app = create_app()

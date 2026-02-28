@@ -112,24 +112,45 @@ class ChatterboxEngine(BaseTTSEngine):
         if importlib.util.find_spec("torch") is None:
             raise RuntimeError("PyTorch is required for Chatterbox")
 
+        import torch
+
         device = resolve_device(self._device, self.logger)
         info(self.logger, "loading model", model=self.model_id, device=device, variant=self._variant)
 
+        # Patch torch.load to handle CPU-only environments
+        # Chatterbox models are saved with CUDA tensors but we may be on CPU
+        _original_torch_load = torch.load
+
+        def _cpu_compatible_load(*args, **kwargs):
+            if "map_location" not in kwargs:
+                kwargs["map_location"] = device
+            return _original_torch_load(*args, **kwargs)
+
+        import threading
+        _torch_load_lock = threading.Lock()
+
         with timeit("load_model") as t_load:
-            try:
-                if self._variant == "turbo":
-                    from chatterbox.tts_turbo import ChatterboxTurboTTS
-                    self._model = ChatterboxTurboTTS.from_pretrained(device=device)
-                elif self._variant == "multilingual":
-                    from chatterbox.mtl_tts import ChatterboxMultilingualTTS
-                    self._model = ChatterboxMultilingualTTS.from_pretrained(device=device)
-                else:  # regular
-                    from chatterbox.tts import ChatterboxTTS
-                    self._model = ChatterboxTTS.from_pretrained(device=device)
-            except ImportError as exc:
-                raise RuntimeError(
-                    "Chatterbox dependency missing. Install with: pip install chatterbox-tts"
-                ) from exc
+            with _torch_load_lock:
+                try:
+                    # Apply patch during model loading (lock prevents concurrent access)
+                    torch.load = _cpu_compatible_load
+
+                    if self._variant == "turbo":
+                        from chatterbox.tts_turbo import ChatterboxTurboTTS
+                        self._model = ChatterboxTurboTTS.from_pretrained(device=device)
+                    elif self._variant == "multilingual":
+                        from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+                        self._model = ChatterboxMultilingualTTS.from_pretrained(device=device)
+                    else:  # regular
+                        from chatterbox.tts import ChatterboxTTS
+                        self._model = ChatterboxTTS.from_pretrained(device=device)
+                except ImportError as exc:
+                    raise RuntimeError(
+                        "Chatterbox dependency missing. Install with: pip install chatterbox-tts"
+                    ) from exc
+                finally:
+                    # Restore original torch.load
+                    torch.load = _original_torch_load
 
         # Get sample rate from model
         if hasattr(self._model, "sr"):

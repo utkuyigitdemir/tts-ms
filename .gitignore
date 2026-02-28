@@ -80,6 +80,7 @@ dmypy.json
 
 # TTS-MS specific
 logs/
+runs/
 storage/
 .tts_cache/
 *.wav
@@ -99,6 +100,10 @@ logs_test/
 storage_test/
 cli_test_outputs/
 .bootstrap_done
+
+# Benchmark results & model cache
+results/
+.model_cache/
 
 .claude/
 claude.md

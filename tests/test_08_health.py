@@ -6,6 +6,7 @@ def test_health_endpoint_and_warmup_skip():
     sys.path.append("src")
 
     from fastapi.testclient import TestClient
+
     from tts_ms.main import create_app
 
     app = create_app()

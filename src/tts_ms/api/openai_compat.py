@@ -353,18 +353,10 @@ def openai_speech(
         # Perform synthesis
         result = service.synthesize(synth_request, rid)
 
-        # Map requested format to MIME type (even though we return WAV)
-        format_content_types = {
-            ResponseFormat.MP3: "audio/mpeg",
-            ResponseFormat.OPUS: "audio/opus",
-            ResponseFormat.AAC: "audio/aac",
-            ResponseFormat.FLAC: "audio/flac",
-            ResponseFormat.PCM: "audio/pcm",
-        }
-        content_type = format_content_types.get(req.response_format, "audio/wav")
+        # Always return audio/wav since we don't transcode to other formats
+        content_type = "audio/wav"
 
         # Build response with metadata headers
-        # Note: Actual audio is always WAV regardless of content_type
         headers = {
             "X-Request-Id": rid,
             "X-Engine": service.engine.name,

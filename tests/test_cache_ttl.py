@@ -10,12 +10,10 @@ Tests cover:
 - Access refreshes position (LRU) but not TTL
 - Thread safety
 """
-import pytest
-import time
 import threading
-from unittest.mock import patch
+import time
 
-from tts_ms.tts.cache import TinyLRUCache, CacheItem
+from tts_ms.tts.cache import CacheItem, TinyLRUCache
 
 
 class TestCacheTTLExpiration:

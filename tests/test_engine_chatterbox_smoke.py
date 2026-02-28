@@ -1,6 +1,7 @@
 """Smoke tests for Chatterbox TTS engine."""
 import os
 import sys
+
 import pytest
 
 pytestmark = pytest.mark.slow

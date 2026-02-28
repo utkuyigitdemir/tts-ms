@@ -56,6 +56,7 @@ See Also:
 from __future__ import annotations
 
 import asyncio
+import collections
 import threading
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
@@ -119,6 +120,7 @@ class ConcurrencyController:
         # Single counter for both sync and async (thread-safe)
         self._lock = threading.Lock()
         self._condition = threading.Condition(self._lock)
+        self._async_waiters = collections.deque()
 
         # Counters
         self._active = 0
@@ -168,6 +170,13 @@ class ConcurrencyController:
             self._active = max(0, self._active - 1)
             self._total_processed += 1
             self._condition.notify()
+
+            # Wake up one async waiter if any
+            while self._async_waiters:
+                loop, fut = self._async_waiters.popleft()
+                if not fut.done():
+                    loop.call_soon_threadsafe(fut.set_result, None)
+                    break
 
     # Alias for internal use
     _release = release
@@ -249,6 +258,7 @@ class ConcurrencyController:
 
         import time
         start = time.monotonic()
+        loop = asyncio.get_running_loop()
 
         try:
             while True:
@@ -258,15 +268,21 @@ class ConcurrencyController:
                         self._active += 1
                         break
 
+                    fut = loop.create_future()
+                    self._async_waiters.append((loop, fut))
+
                 elapsed = time.monotonic() - start
-                if elapsed >= timeout:
+                remaining = max(0.0, timeout - elapsed)
+                if remaining == 0.0:
                     with self._lock:
                         self._waiting = max(0, self._waiting - 1)
                         self._total_rejected += 1
                     raise asyncio.TimeoutError(f"Timeout after {timeout}s waiting for synthesis slot")
 
-                # Yield to event loop and retry
-                await asyncio.sleep(0.01)
+                try:
+                    await asyncio.wait_for(fut, timeout=remaining)
+                except asyncio.TimeoutError:
+                    pass
 
             try:
                 yield
@@ -275,7 +291,7 @@ class ConcurrencyController:
 
         except (asyncio.TimeoutError, RuntimeError):
             raise
-        except Exception:
+        except BaseException:
             with self._lock:
                 self._waiting = max(0, self._waiting - 1)
             raise
@@ -300,6 +316,7 @@ class _AsyncSlotWrapper:
     async def __aenter__(self):
         import time
         start = time.monotonic()
+        loop = asyncio.get_running_loop()
 
         # Check queue depth
         with self._controller._lock:
@@ -317,18 +334,25 @@ class _AsyncSlotWrapper:
                         self._acquired = True
                         break
 
+                    fut = loop.create_future()
+                    self._controller._async_waiters.append((loop, fut))
+
                 elapsed = time.monotonic() - start
-                if elapsed >= self._timeout:
+                remaining = max(0.0, self._timeout - elapsed)
+                if remaining == 0.0:
                     with self._controller._lock:
                         self._controller._waiting = max(0, self._controller._waiting - 1)
                         self._controller._total_rejected += 1
                     raise asyncio.TimeoutError(f"Timeout after {self._timeout}s waiting for synthesis slot")
 
-                await asyncio.sleep(0.01)
+                try:
+                    await asyncio.wait_for(fut, timeout=remaining)
+                except asyncio.TimeoutError:
+                    pass
 
             return self
 
-        except Exception:
+        except BaseException:
             if not self._acquired:
                 with self._controller._lock:
                     self._controller._waiting = max(0, self._controller._waiting - 1)

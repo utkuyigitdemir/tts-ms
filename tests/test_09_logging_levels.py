@@ -5,12 +5,9 @@ import io
 import json
 import logging
 import os
-import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 
 class TestLogLevelEnum:
@@ -89,9 +86,7 @@ class TestLevelFiltering:
 
     def test_level_filtering_minimal(self):
         """Messages above MINIMAL level are suppressed."""
-        from tts_ms.core.logging import (
-            configure_logging, get_logger, info, error, debug, get_level
-        )
+        from tts_ms.core.logging import configure_logging, debug, error, get_logger, info
 
         # Capture stdout
         captured = io.StringIO()
@@ -110,9 +105,7 @@ class TestLevelFiltering:
 
     def test_level_filtering_normal(self):
         """Messages above NORMAL level are suppressed."""
-        from tts_ms.core.logging import (
-            configure_logging, get_logger, info, verbose, debug
-        )
+        from tts_ms.core.logging import configure_logging, debug, get_logger, info, verbose
 
         captured = io.StringIO()
         with patch("sys.stdout", captured):
@@ -130,9 +123,7 @@ class TestLevelFiltering:
 
     def test_level_filtering_verbose(self):
         """VERBOSE level shows verbose messages."""
-        from tts_ms.core.logging import (
-            configure_logging, get_logger, info, verbose, debug
-        )
+        from tts_ms.core.logging import configure_logging, debug, get_logger, info, verbose
 
         captured = io.StringIO()
         with patch("sys.stdout", captured):
@@ -150,9 +141,7 @@ class TestLevelFiltering:
 
     def test_level_filtering_debug(self):
         """DEBUG level shows all messages."""
-        from tts_ms.core.logging import (
-            configure_logging, get_logger, info, verbose, debug, trace
-        )
+        from tts_ms.core.logging import configure_logging, debug, get_logger, info, trace, verbose
 
         captured = io.StringIO()
         with patch("sys.stdout", captured):
@@ -176,9 +165,7 @@ class TestRequestIdPropagation:
 
     def test_request_id_in_log_output(self):
         """Request ID appears in console output."""
-        from tts_ms.core.logging import (
-            configure_logging, get_logger, set_request_id, info
-        )
+        from tts_ms.core.logging import configure_logging, get_logger, info, set_request_id
 
         captured = io.StringIO()
         with patch("sys.stdout", captured):
@@ -196,7 +183,7 @@ class TestEnvOverride:
 
     def test_env_override_log_level(self):
         """TTS_MS_LOG_LEVEL environment variable overrides config."""
-        from tts_ms.core.logging import configure_logging, get_level, LogLevel
+        from tts_ms.core.logging import LogLevel, configure_logging, get_level
 
         with patch.dict(os.environ, {"TTS_MS_LOG_LEVEL": "3"}):
             configure_logging(force=True)
@@ -216,6 +203,7 @@ class TestJsonlOutput:
             with patch.dict(os.environ, {
                 "TTS_MS_LOG_DIR": tmpdir,
                 "TTS_MS_JSONL_FILE": "test.jsonl",
+                "TTS_MS_RUNS_DIR": "",
             }):
                 configure_logging(level=2, force=True)
                 log = get_logger("test_jsonl")
@@ -231,7 +219,7 @@ class TestJsonlOutput:
             # Read and parse JSONL
             assert jsonl_path.exists()
             content = jsonl_path.read_text()
-            lines = [l for l in content.strip().split("\n") if l]
+            lines = [line for line in content.strip().split("\n") if line]
 
             # Should have at least one log line
             assert len(lines) >= 1

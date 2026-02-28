@@ -58,7 +58,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from tts_ms.api.dependencies import get_tts_service
 from tts_ms.api.schemas import TTSRequest
-from tts_ms.core.logging import get_logger, set_request_id
+from tts_ms.core.logging import fail, get_logger, set_request_id, warn
 from tts_ms.core.metrics import metrics
 from tts_ms.services.tts_service import (
     ErrorCode,
@@ -185,8 +185,10 @@ def tts_v1(
         status_code = status_map.get(e.code, 500)
         return _error_response(e, status_code)
 
-    except Exception:
+    except Exception as e:
         # Catch-all for unexpected errors - log internally but don't expose details
+        fail(_LOG, "tts_v1_unexpected", error=str(e),
+             error_type=type(e).__name__, request_id=rid)
         return JSONResponse(
             status_code=500,
             content={
@@ -248,6 +250,18 @@ def tts_stream(
     rid = str(uuid.uuid4())[:12]
     set_request_id(rid)
 
+    # Check if TTS model is loaded and warmed up
+    if not service.is_ready():
+        return JSONResponse(
+            status_code=503,
+            content={
+                "ok": False,
+                "error": ErrorCode.MODEL_NOT_READY,
+                "message": "Model not ready, please wait for warmup",
+                "hint": "wait for warmup",
+            },
+        )
+
     # Decode speaker reference audio (if provided for voice cloning)
     speaker_wav = service.decode_speaker_wav(req.speaker_wav_b64)
 
@@ -257,6 +271,9 @@ def tts_stream(
 
     def gen():
         """Generator that yields SSE events as chunks are synthesized."""
+        # Re-set request ID inside generator (runs in different execution context)
+        set_request_id(rid)
+
         try:
             # Build synthesis request
             synth_request = SynthesizeRequest(
@@ -277,8 +294,14 @@ def tts_stream(
             # Stream audio chunks as they're generated
             total_chunks = 0
             total_seconds = 0.0
+            total_bytes = 0
+            cache_hits = 0
             for chunk in service.synthesize_stream(synth_request, rid):
                 total_chunks = chunk.total
+                total_seconds += chunk.synth_time + chunk.encode_time
+                total_bytes += len(chunk.wav_bytes) if chunk.wav_bytes else 0
+                if chunk.cache_status in ("mem", "disk"):
+                    cache_hits += 1
                 # Encode audio as base64 for safe SSE transmission
                 b64 = base64.b64encode(chunk.wav_bytes).decode("ascii")
                 yield sse("chunk", {
@@ -290,18 +313,35 @@ def tts_stream(
                     "audio_wav_b64": b64,
                 })
 
-            # Send completion event
-            yield sse("done", {"chunks": total_chunks, "seconds_total": round(total_seconds, 3)})
+            # Send enriched completion event
+            yield sse("done", {
+                "chunks": total_chunks,
+                "seconds_total": round(total_seconds, 3),
+                "bytes_total": total_bytes,
+                "cache_hits": cache_hits,
+                "engine": service.engine_name,
+            })
 
         except TTSError as e:
             # Send error event for known TTS errors
+            warn(_LOG, "stream_sse_error", code=e.code, message=e.message,
+                 request_id=rid)
             yield sse("error", {"code": e.code, "message": e.message})
 
         except Exception as e:
-            # Send error event for unexpected errors
-            yield sse("error", {"code": ErrorCode.INTERNAL_ERROR, "message": str(e)})
+            # Send error event for unexpected errors - log details internally,
+            # but don't expose internal error details to clients
+            fail(_LOG, "stream_sse_unexpected", error=str(e),
+                 error_type=type(e).__name__, request_id=rid)
+            yield sse("error", {"code": ErrorCode.INTERNAL_ERROR, "message": "Internal server error"})
 
-    return StreamingResponse(gen(), media_type="text/event-stream")
+    headers = {
+        "X-Request-Id": rid,
+        "X-Sample-Rate": str(service.settings.sample_rate),
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+    }
+    return StreamingResponse(gen(), media_type="text/event-stream", headers=headers)
 
 
 @router.get("/health")

@@ -17,6 +17,7 @@ The TTSService class handles:
 """
 from .tts_service import (
     ErrorCode,
+    InvalidInputError,
     QueueFullError,
     StreamChunk,
     SynthesisError,
@@ -36,5 +37,6 @@ __all__ = [
     "SynthesisError",
     "TimeoutError",
     "QueueFullError",
+    "InvalidInputError",
     "ErrorCode",
 ]

@@ -1,5 +1,6 @@
 def test_benchmark_dry_run():
-    import subprocess, sys
+    import subprocess
+    import sys
     p = subprocess.run(
         [sys.executable, "scripts/benchmark.py", "--dry-run"],
         capture_output=True,

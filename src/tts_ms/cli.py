@@ -21,11 +21,18 @@ Usage Examples:
     # Override speaker and language
     tts-ms --text "Test" --speaker female --language tr
 
+    # Check engine status and requirements
+    tts-ms --engines
+
+    # Setup specific engine (with auto-install)
+    tts-ms --setup f5tts
+
 Environment Variables:
     TTS_MODEL_TYPE: Engine to use (piper, f5tts, legacy, etc.)
     TTS_DEVICE: Device override (cuda/cpu)
     TTS_MS_SPEAKER: Default speaker
     TTS_MS_LANGUAGE: Default language
+    TTS_MS_AUTO_INSTALL: Enable automatic pip package installation
 """
 
 from __future__ import annotations
@@ -74,6 +81,14 @@ def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                        help="Parse and summarize without synth")
     parser.add_argument("--json", action="store_true",
                        help="Print JSON summary")
+
+    # Engine management
+    parser.add_argument("--engines", action="store_true",
+                       help="Show all engines and their status")
+    parser.add_argument("--setup", metavar="ENGINE",
+                       help="Setup specific engine (check/install dependencies)")
+    parser.add_argument("--auto-install", action="store_true",
+                       help="Auto-install missing pip packages (use with --setup)")
 
     return parser.parse_args(argv)
 
@@ -251,10 +266,11 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     Orchestrates the CLI workflow:
         1. Parse arguments and configure environment
-        2. Load settings and resolve parameters
-        3. Handle dry-run mode (if requested)
-        4. Initialize engine and synthesize texts
-        5. Output results in text or JSON format
+        2. Handle engine management commands (--engines, --setup)
+        3. Load settings and resolve parameters
+        4. Handle dry-run mode (if requested)
+        5. Initialize engine and synthesize texts
+        6. Output results in text or JSON format
 
     Args:
         argv: Optional list of command-line arguments.
@@ -263,6 +279,30 @@ def main(argv: Optional[List[str]] = None) -> int:
         Exit code (0 for success, non-zero for errors).
     """
     args = _parse_args(argv)
+
+    # Handle engine management commands first (no settings needed)
+    if args.engines:
+        from tts_ms.core.engine_setup import print_engine_status
+        print_engine_status()
+        return 0
+
+    if args.setup:
+        from tts_ms.core.engine_setup import get_engine_info, setup_engine
+        engine_info = get_engine_info(args.setup)
+        if not engine_info:
+            print(f"Unknown engine: {args.setup}")
+            print("Available engines: piper, f5tts, styletts2, legacy, chatterbox, cosyvoice, kokoro, qwen3tts, vibevoice")
+            return 1
+
+        print(f"\nSetting up {engine_info.display_name}...")
+        result = setup_engine(args.setup, auto_install=args.auto_install)
+
+        if result.satisfied:
+            print(f"[OK] {result.message}")
+            return 0
+        else:
+            print(f"[FAILED] {result.message}")
+            return 1
 
     # Apply device override to environment
     if args.device:

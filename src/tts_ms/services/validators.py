@@ -100,8 +100,10 @@ def validate_text(text: str, max_length: int = 4000) -> str:
     Raises:
         ValidationError: If validation fails
     """
-    if not text:
+    if not text or not text.strip():
         raise ValidationError("Text is required", "TEXT_REQUIRED")
+
+    text = text.strip()
 
     if len(text) > max_length:
         raise ValidationError(
@@ -143,7 +145,7 @@ def validate_speaker_wav_b64(
 
     try:
         decoded = base64.b64decode(b64)
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         warn(_LOG, "speaker_wav_b64_decode_failed", error=str(e))
         raise ValidationError(
             "Invalid base64 encoding in speaker_wav_b64",

@@ -2,6 +2,12 @@
 
 This document describes the system dependencies required to run engine-specific smoke tests. These tests are skipped when dependencies are not available.
 
+> **For comprehensive setup instructions**, see [ENGINE_ENVIRONMENTS.md](ENGINE_ENVIRONMENTS.md) which covers:
+> - Multi-environment setup (Python 3.10, 3.11, 3.12)
+> - Detailed per-engine installation steps
+> - System dependency installation for all platforms
+> - Troubleshooting common issues
+
 ## Test Status Summary
 
 | Engine | Test File | Status | Dependency |
@@ -9,8 +15,12 @@ This document describes the system dependencies required to run engine-specific 
 | Piper | `test_engine_piper_smoke.py` | ✅ Pass | None (CPU-only) |
 | F5-TTS | `test_engine_f5tts_smoke.py` | ⚠️ Skip | ffmpeg |
 | StyleTTS2 | `test_engine_styletts2_smoke.py` | ⚠️ Skip | espeak-ng |
+| Legacy XTTS v2 | *(no dedicated smoke test)* | ⚠️ Manual | coqui-tts, model download |
 | CosyVoice | `test_engine_cosyvoice_smoke.py` | ⚠️ Skip | Manual installation |
 | Chatterbox | `test_engine_chatterbox_smoke.py` | ⚠️ Skip | Python 3.11 |
+| Kokoro | `test_engine_kokoro_smoke.py` | ⚠️ Skip | kokoro-onnx + model files |
+| Qwen3-TTS | `test_engine_qwen3tts_smoke.py` | ⚠️ Skip | GPU + qwen-tts |
+| VibeVoice | `test_engine_vibevoice_smoke.py` | ⚠️ Skip | GPU + vibevoice |
 
 ---
 
@@ -112,7 +122,7 @@ pip install -r requirements.txt
 ```
 
 ### Notes
-- CosyVoice requires significant VRAM (8GB+ recommended)
+- CosyVoice requires significant VRAM (6-8 GB recommended)
 - Model weights are large (~10GB)
 
 ---
@@ -153,6 +163,80 @@ Chatterbox smoke test PASSED!
 
 ---
 
+## Kokoro
+
+**Skip Reason:** `Kokoro requires kokoro-onnx package and model files`
+
+Kokoro uses ONNX Runtime for CPU-based inference with preset voices.
+
+### Requirements
+- kokoro-onnx pip package
+- Model files from HuggingFace (~300MB)
+
+### Installation
+
+```bash
+pip install kokoro-onnx huggingface-hub
+
+# Download model files
+python -c "from huggingface_hub import hf_hub_download; \
+  hf_hub_download('onnx-community/Kokoro-82M-v1.0-ONNX', 'kokoro-v1.0.onnx', local_dir='models/kokoro'); \
+  hf_hub_download('onnx-community/Kokoro-82M-v1.0-ONNX', 'voices-v1.0.bin', local_dir='models/kokoro')"
+```
+
+### Notes
+- CPU-only, no GPU required
+- Multiple preset voices available (af_sarah, am_adam, etc.)
+
+---
+
+## Qwen3-TTS
+
+**Skip Reason:** `Qwen3-TTS requires GPU and qwen-tts package`
+
+Qwen3-TTS is Alibaba's TTS model with preset speakers and voice cloning.
+
+### Requirements
+- GPU with CUDA support (~3-4 GB VRAM)
+- qwen-tts pip package
+
+### Installation
+
+```bash
+pip install torch torchaudio qwen-tts
+```
+
+### Notes
+- Preset speakers: Vivian, Serena, Ethan, Chelsie
+- Supports voice cloning from reference audio
+- Model auto-downloads from HuggingFace on first run
+
+---
+
+## VibeVoice
+
+**Skip Reason:** `VibeVoice requires GPU and vibevoice package`
+
+VibeVoice is Microsoft's research TTS model with multiple preset speakers.
+
+### Requirements
+- GPU with CUDA support (~7 GB VRAM)
+- vibevoice pip package
+- ffmpeg
+
+### Installation
+
+```bash
+pip install vibevoice
+```
+
+### Notes
+- Research-only license - check Microsoft's terms before commercial use
+- Preset speakers: Alice, Frank, Mary, Carter, Enrique, Eric
+- Model auto-downloads from HuggingFace on first run
+
+---
+
 ## Running Engine-Specific Tests
 
 To run a specific engine's smoke test:
@@ -164,6 +248,9 @@ TTS_MODEL_TYPE=f5tts python -m pytest tests/test_engine_f5tts_smoke.py -v
 TTS_MODEL_TYPE=styletts2 python -m pytest tests/test_engine_styletts2_smoke.py -v
 TTS_MODEL_TYPE=cosyvoice python -m pytest tests/test_engine_cosyvoice_smoke.py -v
 TTS_MODEL_TYPE=chatterbox python -m pytest tests/test_engine_chatterbox_smoke.py -v
+TTS_MODEL_TYPE=kokoro python -m pytest tests/test_engine_kokoro_smoke.py -v
+TTS_MODEL_TYPE=qwen3tts python -m pytest tests/test_engine_qwen3tts_smoke.py -v
+TTS_MODEL_TYPE=vibevoice python -m pytest tests/test_engine_vibevoice_smoke.py -v
 ```
 
 ## Full Test Suite
@@ -174,5 +261,5 @@ To run all tests (engine-specific tests will skip if dependencies unavailable):
 # With Piper (recommended for CI)
 TTS_MODEL_TYPE=piper python -m pytest -v
 
-# Results: 446 passed, 4 skipped
+# Results: 470 passed, 10 skipped
 ```

@@ -10,8 +10,9 @@ Tests cover:
 - Engine settings hash generation
 - Cache key generation
 """
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from tts_ms.core.config import Settings
 from tts_ms.tts.engine import (
@@ -75,6 +76,18 @@ class TestNormalizeEngineType:
         """'chatterbox' should pass through unchanged."""
         assert _normalize_engine_type("chatterbox") == "chatterbox"
 
+    def test_normalize_kokoro(self):
+        """'kokoro' should pass through unchanged."""
+        assert _normalize_engine_type("kokoro") == "kokoro"
+
+    def test_normalize_qwen3tts(self):
+        """'qwen3tts' should pass through unchanged."""
+        assert _normalize_engine_type("qwen3tts") == "qwen3tts"
+
+    def test_normalize_vibevoice(self):
+        """'vibevoice' should pass through unchanged."""
+        assert _normalize_engine_type("vibevoice") == "vibevoice"
+
     def test_normalize_unknown(self):
         """Unknown engine types should pass through unchanged."""
         assert _normalize_engine_type("unknown_engine") == "unknown_engine"
@@ -114,6 +127,11 @@ class TestResolveEngineType:
 
 class TestCreateEngine:
     """Tests for _create_engine() function."""
+
+    @pytest.fixture(autouse=True)
+    def skip_setup_checks(self, monkeypatch):
+        """Skip engine setup checks for factory tests."""
+        monkeypatch.setenv("TTS_MS_SKIP_SETUP", "1")
 
     def test_create_legacy_engine(self, mock_settings):
         """Should create LegacyXTTSEngine for 'legacy' type."""
@@ -156,6 +174,27 @@ class TestCreateEngine:
 
         engine = _create_engine("chatterbox", mock_settings)
         assert isinstance(engine, ChatterboxEngine)
+
+    def test_create_kokoro_engine(self, mock_settings):
+        """Should create KokoroEngine for 'kokoro' type."""
+        from tts_ms.tts.engines.kokoro_engine import KokoroEngine
+
+        engine = _create_engine("kokoro", mock_settings)
+        assert isinstance(engine, KokoroEngine)
+
+    def test_create_qwen3tts_engine(self, mock_settings):
+        """Should create Qwen3TTSEngine for 'qwen3tts' type."""
+        from tts_ms.tts.engines.qwen3tts_engine import Qwen3TTSEngine
+
+        engine = _create_engine("qwen3tts", mock_settings)
+        assert isinstance(engine, Qwen3TTSEngine)
+
+    def test_create_vibevoice_engine(self, mock_settings):
+        """Should create VibeVoiceEngine for 'vibevoice' type."""
+        from tts_ms.tts.engines.vibevoice_engine import VibeVoiceEngine
+
+        engine = _create_engine("vibevoice", mock_settings)
+        assert isinstance(engine, VibeVoiceEngine)
 
     def test_unknown_engine_raises_error(self, mock_settings):
         """Should raise ValueError for unknown engine type."""

@@ -11,21 +11,20 @@ Tests cover:
 - Missing sections use defaults
 - Settings properties
 """
+
 import pytest
-import tempfile
-from pathlib import Path
 
 from tts_ms.core.config import (
-    Settings,
-    Defaults,
-    TTSServiceConfig,
-    ConfigValidationError,
-    CacheConfig,
-    StorageConfig,
-    ConcurrencyConfig,
     BatchingConfig,
+    CacheConfig,
     ChunkingConfig,
+    ConcurrencyConfig,
+    ConfigValidationError,
+    Defaults,
     LoggingConfig,
+    Settings,
+    StorageConfig,
+    TTSServiceConfig,
     load_settings,
 )
 

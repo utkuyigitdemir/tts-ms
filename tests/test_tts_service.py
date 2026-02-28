@@ -13,27 +13,23 @@ Tests cover:
 """
 import base64
 import os
-import pytest
 import tempfile
-import threading
-import time
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
-from tts_ms.core.config import Settings, Defaults
+import pytest
+
+from tts_ms.core.config import Settings
 from tts_ms.services.tts_service import (
-    TTSService,
-    TTSError,
-    SynthesisError,
-    TimeoutError,
-    QueueFullError,
     ErrorCode,
+    StreamChunk,
+    SynthesisError,
     SynthesizeRequest,
     SynthesizeResult,
-    StreamChunk,
+    TTSService,
     get_service,
     reset_service,
 )
-from tts_ms.tts.engine import SynthResult, EngineCapabilities
+from tts_ms.tts.engine import EngineCapabilities, SynthResult
 
 
 @pytest.fixture
@@ -188,10 +184,11 @@ class TestDecodesSpeakerWav:
         result = tts_service.decode_speaker_wav("")
         assert result is None
 
-    def test_decode_invalid_base64_returns_none(self, tts_service):
-        """decode_speaker_wav should return None for invalid base64."""
-        result = tts_service.decode_speaker_wav("not-valid-base64!!!")
-        assert result is None
+    def test_decode_invalid_base64_raises_error(self, tts_service):
+        """decode_speaker_wav should raise InvalidInputError for invalid base64."""
+        from tts_ms.services.tts_service import InvalidInputError
+        with pytest.raises(InvalidInputError):
+            tts_service.decode_speaker_wav("not-valid-base64!!!")
 
 
 class TestSynthesize:

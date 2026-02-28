@@ -127,7 +127,9 @@ def call_with_fallback(
 def _extract_audio_and_sr(output: Any) -> Tuple[Any, Optional[int]]:
     if isinstance(output, dict):
         audio = output.get("wav") or output.get("audio") or output.get("waveform") or output.get("samples")
-        sr = output.get("sr") or output.get("sample_rate")
+        sr = output.get("sr")
+        if sr is None:
+            sr = output.get("sample_rate")
         return audio, int(sr) if sr is not None else None
 
     if isinstance(output, (list, tuple)):

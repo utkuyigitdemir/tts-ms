@@ -3,6 +3,7 @@ def test_wav_bytes_header():
     sys.path.append("src")
 
     import numpy as np
+
     from tts_ms.utils.audio import wav_bytes_from_float32
 
     sr = 24000

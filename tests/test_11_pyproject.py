@@ -4,8 +4,6 @@ from __future__ import annotations
 import subprocess
 import sys
 
-import pytest
-
 
 class TestPackageInstallation:
     """Test that the package is properly installed."""
@@ -24,13 +22,9 @@ class TestPackageInstallation:
 
     def test_core_modules_importable(self):
         """Core modules can be imported."""
-        from tts_ms.core import config
-        from tts_ms.core import logging
-        from tts_ms.api import routes
-        from tts_ms.api import schemas
-        from tts_ms.tts import engine
-        from tts_ms.tts import cache
-        from tts_ms.tts import chunker
+        from tts_ms.api import routes, schemas
+        from tts_ms.core import config, logging
+        from tts_ms.tts import cache, chunker, engine
 
         assert config is not None
         assert logging is not None
@@ -56,11 +50,12 @@ class TestCLIEntryPoint:
 
     def test_cli_entry_point_exists(self):
         """tts-ms command is available after pip install."""
+        # Use string form with shell=True so args are passed correctly on all platforms
         result = subprocess.run(
-            ["tts-ms", "--help"],
+            "tts-ms --help",
             capture_output=True,
             text=True,
-            shell=True,  # Needed on Windows
+            shell=True,
         )
         # Entry point should work
         assert result.returncode == 0 or "tts-ms" in result.stdout or "tts-ms" in result.stderr
@@ -77,8 +72,8 @@ class TestPyprojectToml:
 
     def test_pyproject_valid_toml(self):
         """pyproject.toml is valid TOML."""
-        from pathlib import Path
         import tomllib  # Python 3.11+
+        from pathlib import Path
 
         pyproject = Path(__file__).parent.parent / "pyproject.toml"
         content = pyproject.read_text()
@@ -90,8 +85,8 @@ class TestPyprojectToml:
 
     def test_pyproject_has_dependencies(self):
         """pyproject.toml defines dependencies."""
-        from pathlib import Path
         import tomllib
+        from pathlib import Path
 
         pyproject = Path(__file__).parent.parent / "pyproject.toml"
         data = tomllib.loads(pyproject.read_text())

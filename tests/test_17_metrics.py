@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+
 import pytest
 
 
@@ -81,16 +82,18 @@ class TestMetricsEndpoint:
     def test_metrics_endpoint_exists(self):
         """The /metrics endpoint should exist."""
         from fastapi.testclient import TestClient
+
         from tts_ms.main import create_app
 
         app = create_app()
-        with TestClient(app) as client:
+        with TestClient(app):
             routes = [r.path for r in app.routes]
             assert "/metrics" in routes
 
     def test_metrics_returns_200(self):
         """The /metrics endpoint should return 200."""
         from fastapi.testclient import TestClient
+
         from tts_ms.main import create_app
 
         app = create_app()
@@ -101,6 +104,7 @@ class TestMetricsEndpoint:
     def test_metrics_content_type(self):
         """The /metrics endpoint should return text content."""
         from fastapi.testclient import TestClient
+
         from tts_ms.main import create_app
 
         app = create_app()
@@ -154,7 +158,7 @@ class TestMetricsWithPrometheus:
 
     def test_metrics_format_when_available(self):
         """When prometheus is available, should return proper format."""
-        from tts_ms.core.metrics import metrics, PROMETHEUS_AVAILABLE
+        from tts_ms.core.metrics import PROMETHEUS_AVAILABLE, metrics
 
         if not PROMETHEUS_AVAILABLE:
             pytest.skip("prometheus_client not installed")
@@ -167,7 +171,7 @@ class TestMetricsWithPrometheus:
 
     def test_request_counter_format(self):
         """Request counter should have correct format."""
-        from tts_ms.core.metrics import metrics, PROMETHEUS_AVAILABLE
+        from tts_ms.core.metrics import PROMETHEUS_AVAILABLE, metrics
 
         if not PROMETHEUS_AVAILABLE:
             pytest.skip("prometheus_client not installed")
@@ -198,7 +202,7 @@ class TestTTSMetricsClass:
 
     def test_enabled_matches_availability(self):
         """enabled should match PROMETHEUS_AVAILABLE."""
-        from tts_ms.core.metrics import TTSMetrics, PROMETHEUS_AVAILABLE
+        from tts_ms.core.metrics import PROMETHEUS_AVAILABLE, TTSMetrics
 
         m = TTSMetrics()
         assert m.enabled == PROMETHEUS_AVAILABLE

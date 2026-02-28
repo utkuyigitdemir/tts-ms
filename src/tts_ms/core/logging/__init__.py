@@ -58,11 +58,15 @@ See Also:
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
 import sys
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 # Module-level color flag (accessed via getattr for test manipulation)
 from .colors import USE_COLORS as _USE_COLORS  # noqa: F401
@@ -72,14 +76,18 @@ from .context import (
     get_level_name,
     get_log_config,
     get_request_id,
+    get_run_dir,
+    get_run_id,
     is_configured,
     read_logging_config,
     set_configured,
     set_level,
     set_log_config,
     set_request_id,
+    set_run_dir,
+    set_run_id,
 )
-from .formatters import ColoredConsoleFormatter, JsonlFormatter
+from .formatters import ColoredConsoleFormatter, JsonlFormatter, ResourceFilter
 
 # Re-export public API
 from .levels import LEVEL_MAP, LEVEL_NAMES, LogLevel, coerce_level
@@ -122,13 +130,53 @@ def configure_logging(level: Optional[int | str | LogLevel] = None, force: bool 
     console.setFormatter(ColoredConsoleFormatter())
     root.addHandler(console)
 
-    # File handler (JSONL)
-    log_dir = log_config.get("log_dir")
-    jsonl_file = log_config.get("jsonl_file", "tts-ms.jsonl")
+    # File handler configuration
     max_bytes = int(log_config.get("rotate_max_bytes", 10 * 1024 * 1024))
     backup_count = int(log_config.get("rotate_backup_count", 5))
 
-    if log_dir:
+    runs_dir = log_config.get("runs_dir")
+    log_dir = log_config.get("log_dir")
+
+    if runs_dir:
+        # ── Per-run directory mode ──
+        run_id = "run_" + datetime.now().strftime("%H%M%S_%d%m%Y") + "_" + uuid4().hex[:6]
+        run_dir = Path(runs_dir) / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        set_run_id(run_id)
+        set_run_dir(run_dir)
+
+        # app.jsonl — all logs
+        app_handler = RotatingFileHandler(
+            run_dir / "app.jsonl",
+            maxBytes=max_bytes,
+            backupCount=backup_count,
+            encoding="utf-8",
+            delay=True,
+        )
+        app_handler.setLevel(logging.DEBUG - 10)
+        app_handler.setFormatter(JsonlFormatter())
+        root.addHandler(app_handler)
+
+        # resources.jsonl — resource metrics only
+        res_handler = RotatingFileHandler(
+            run_dir / "resources.jsonl",
+            maxBytes=max_bytes,
+            backupCount=backup_count,
+            encoding="utf-8",
+            delay=False,
+        )
+        res_handler.setLevel(logging.DEBUG - 10)
+        res_handler.setFormatter(JsonlFormatter())
+        res_handler.addFilter(ResourceFilter())
+        root.addHandler(res_handler)
+
+        # run_info.json — initial metadata (enriched later by TTSService)
+        _write_run_info(run_dir, run_id, current_level)
+
+    elif log_dir:
+        # ── Legacy single-file mode (backward compat) ──
+        jsonl_file = log_config.get("jsonl_file", "tts-ms.jsonl")
         Path(log_dir).mkdir(parents=True, exist_ok=True)
         jsonl_path = Path(log_dir) / str(jsonl_file)
         file_handler = RotatingFileHandler(
@@ -143,6 +191,19 @@ def configure_logging(level: Optional[int | str | LogLevel] = None, force: bool 
         root.addHandler(file_handler)
 
     set_configured(True)
+
+
+def _write_run_info(run_dir: Path, run_id: str, level: LogLevel) -> None:
+    """Write initial run_info.json with startup metadata."""
+    info_path = run_dir / "run_info.json"
+    data = {
+        "run_id": run_id,
+        "started_at": datetime.now().astimezone().isoformat(),
+        "log_level": int(level),
+        "log_level_name": LEVEL_NAMES.get(level, "NORMAL"),
+        "pid": os.getpid(),
+    }
+    info_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
 def _log(
@@ -269,9 +330,12 @@ __all__ = [
     "get_level",
     "get_level_name",
     "get_log_config",
+    "get_run_id",
+    "get_run_dir",
     # Formatters
     "JsonlFormatter",
     "ColoredConsoleFormatter",
+    "ResourceFilter",
     # Configuration
     "configure_logging",
     "get_logger",

@@ -228,10 +228,11 @@ def chunk_text_breath_groups(
 
 def _split_by_breath_groups(text: str, max_chars: int) -> List[str]:
     """
-    Split text at natural breath points (commas, semicolons, etc.).
+    Split text at natural breath points (commas, semicolons, Turkish conjunctions).
 
     Tries to keep chunks under max_chars while splitting at natural
-    pause points rather than arbitrary positions.
+    pause points rather than arbitrary positions. Uses _BREATH_GROUP_SPLIT
+    which includes Turkish conjunctions (ve, ama, fakat, veya, etc.).
 
     Args:
         text: Text segment to split.
@@ -240,8 +241,8 @@ def _split_by_breath_groups(text: str, max_chars: int) -> List[str]:
     Returns:
         List of text chunks.
     """
-    # Get clause-level parts
-    parts = [m.group(0).strip() for m in _SOFT_SPLIT.finditer(text) if m.group(0).strip()]
+    # Use breath-group regex which includes Turkish conjunctions
+    parts = [m.group(0).strip() for m in _BREATH_GROUP_SPLIT.finditer(text) if m.group(0).strip()]
 
     result: List[str] = []
     current = ""

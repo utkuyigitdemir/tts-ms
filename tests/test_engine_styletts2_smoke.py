@@ -1,5 +1,6 @@
 """Smoke tests for StyleTTS2 engine."""
 import os
+
 import pytest
 
 pytestmark = pytest.mark.slow
@@ -31,8 +32,8 @@ if not _check_espeak():
 
 def test_engine_styletts2_smoke():
     """Basic smoke test for StyleTTS2 engine."""
-    import sys
     import pickle
+    import sys
     sys.path.append("src")
 
     from tts_ms.core.config import load_settings

@@ -1,8 +1,6 @@
 """Tests for breath-group chunking for faster TTFA."""
 from __future__ import annotations
 
-import pytest
-
 
 class TestBreathGroupChunker:
     """Test breath-group chunking functionality."""

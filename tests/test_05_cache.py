@@ -2,8 +2,8 @@ def test_cache_and_storage_roundtrip():
     import sys
     sys.path.append("src")
 
-    from tts_ms.tts.storage import make_key, save_wav, try_load_wav, hash_dict
-    from tts_ms.tts.cache import TinyLRUCache, CacheItem
+    from tts_ms.tts.cache import CacheItem, TinyLRUCache
+    from tts_ms.tts.storage import hash_dict, make_key, save_wav, try_load_wav
 
     base_dir = "storage_test"
     text = "Merhaba"

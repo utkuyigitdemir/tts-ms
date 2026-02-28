@@ -74,6 +74,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from tts_ms.core.config import Defaults
 from tts_ms.core.logging import get_logger, info, verbose
+from tts_ms.tts.engine import SynthesizeRequest
 
 if TYPE_CHECKING:
     from tts_ms.tts.concurrency import ConcurrencyController
@@ -90,6 +91,7 @@ class BatchRequest:
     speaker: str
     language: str
     speaker_wav: Optional[bytes]
+    split_sentences: Optional[bool]
     cache_key: str
     submit_time: float
     future: threading.Event = field(default_factory=threading.Event)
@@ -238,6 +240,7 @@ class RequestBatcher:
             speaker=speaker,
             language=language,
             speaker_wav=speaker_wav,
+            split_sentences=split_sentences,
             cache_key=cache_key,
             submit_time=time.perf_counter(),
         )
@@ -267,8 +270,8 @@ class RequestBatcher:
         if req.error:
             raise req.error
 
-        # Should never be None if no error
-        assert req.result is not None
+        if req.result is None:
+            raise RuntimeError("Batch processing completed without result or error")
         return req.result
 
     def _start_timer(self) -> None:
@@ -344,35 +347,40 @@ class RequestBatcher:
     def _process_batch_items(self, batch: List[BatchRequest], batch_num: int) -> None:
         """Process items in the batch (helper for lock context)."""
         batch_size = len(batch)
-        for i, req in enumerate(batch):
-            try:
-                # Calculate wait time
-                wait_ms = (time.perf_counter() - req.submit_time) * 1000
 
-                # Thread-safe stats update (Faz 3.2)
-                with self._stats_lock:
-                    self._total_wait_ms += wait_ms
+        synth_requests = []
+        for req in batch:
+            synth_requests.append(SynthesizeRequest(
+                text=req.text,
+                speaker=req.speaker,
+                language=req.language,
+                speaker_wav=req.speaker_wav,
+                split_sentences=req.split_sentences,
+            ))
+            # Calculate wait time and update stats
+            wait_ms = (time.perf_counter() - req.submit_time) * 1000
+            with self._stats_lock:
+                self._total_wait_ms += wait_ms
 
-                # Process request
-                result = self._engine.synthesize(
-                    text=req.text,
-                    speaker=req.speaker,
-                    language=req.language,
-                    speaker_wav=req.speaker_wav,
-                )
+        try:
+            results = self._engine.synthesize_batch(synth_requests)
+            if len(results) != batch_size:
+                raise RuntimeError(f"Engine returned {len(results)} results for batch of {batch_size} requests")
+
+            for i, (req, result) in enumerate(zip(batch, results)):
                 req.result = result
-
+                req.future.set()
                 verbose(
                     _LOG, "batch_item_done",
                     batch_num=batch_num,
                     item=i + 1,
                     total=batch_size,
-                    wait_ms=round(wait_ms, 1),
                 )
-            except Exception as e:
-                req.error = e
-            finally:
-                req.future.set()
+        except Exception as e:
+            for req in batch:
+                if not req.future.is_set():
+                    req.error = e
+                    req.future.set()
 
         info(
             _LOG, "batch_done",

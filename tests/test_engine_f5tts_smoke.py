@@ -1,8 +1,9 @@
 """Smoke tests for F5-TTS engine."""
 import os
 import subprocess
-import pytest
 from pathlib import Path
+
+import pytest
 
 pytestmark = pytest.mark.slow
 

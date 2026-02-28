@@ -8,30 +8,38 @@ is more important than maximum quality.
 Features:
     - CPU-only inference (no GPU required)
     - Very fast synthesis (real-time on modest hardware)
-    - Multiple Turkish voices available
+    - Per-language voice selection via ``voices`` config
     - ONNX model format (portable, optimized)
 
 Model Configuration:
-    Piper requires both a model file (.onnx) and config file (.json):
+    Piper requires both a model file (.onnx) and config file (.json).
+    A single default voice is configured via ``model_path`` / ``config_path``.
+    Optional per-language voices can be added under ``voices``:
 
     settings.yaml:
         tts:
           piper:
-            model_path: /models/tr_TR-dfki-medium.onnx
-            config_path: /models/tr_TR-dfki-medium.onnx.json
-            speaker_id: 0        # For multi-speaker models
-            length_scale: 1.0    # Speaking speed
-            noise_scale: 0.667   # Variation amount
-            noise_w: 0.8         # Phoneme duration variation
+            model_path: models/piper/tr_TR-dfki-medium.onnx
+            config_path: models/piper/tr_TR-dfki-medium.onnx.json
+            voices:
+              tr:
+                model_path: models/piper/tr_TR-dfki-medium.onnx
+                config_path: models/piper/tr_TR-dfki-medium.onnx.json
+              en:
+                model_path: models/piper/en_US-lessac-medium.onnx
+                config_path: models/piper/en_US-lessac-medium.onnx.json
+            speaker_id: 0
+            length_scale: 1.0
+            noise_scale: 0.667
+            noise_w: 0.8
 
-Turkish Models:
-    Available from Hugging Face rhasspy/piper-voices:
-        - tr_TR-dfki-medium: Good quality, medium speed
-        - tr_TR-fettah-medium: Alternative voice
+Available Models:
+    Turkish:  tr_TR-dfki-medium, tr_TR-fettah-medium
+    English:  en_US-lessac-medium, en_US-amy-medium, en_GB-alan-medium
 
 Installation:
     pip install piper-tts
-    # Download model files separately
+    # Download model files separately from HuggingFace rhasspy/piper-voices
 
 See Also:
     - https://github.com/rhasspy/piper
@@ -54,22 +62,20 @@ from tts_ms.utils.timeit import timeit
 
 class PiperEngine(BaseTTSEngine):
     """
-    Piper TTS engine implementation.
+    Piper TTS engine with per-language voice selection.
 
-    Uses the Piper TTS library with ONNX runtime for fast CPU inference.
-    Suitable for production deployments without GPU.
-
-    Attributes:
-        name: Engine identifier ("piper").
-        capabilities: Supported features (speaker, language, no voice cloning).
+    Loads one or more PiperVoice instances at startup.  When ``voices``
+    is configured in settings, each language key gets its own model.
+    The ``language`` parameter in ``synthesize()`` selects the voice;
+    if no match is found, the default voice is used.
     """
 
     name = "piper"
     capabilities = EngineCapabilities(
-        speaker=True,                    # Supports multiple speakers
-        speaker_reference_audio=False,   # No voice cloning
-        language=True,                   # Supports language selection
-        streaming=False,                 # No streaming support
+        speaker=True,
+        speaker_reference_audio=False,
+        language=True,
+        streaming=False,
     )
 
     def __init__(self, settings: Settings):
@@ -77,31 +83,75 @@ class PiperEngine(BaseTTSEngine):
         cfg = settings.raw.get("tts", {}).get("piper", {})
         self.model_id = str(cfg.get("model_path", "piper"))
         self._cfg = cfg
-        self._voice = None
+        self._default_voice = None               # PiperVoice (fallback)
+        self._voices: dict[str, object] = {}     # lang -> PiperVoice
+        self._sample_rates: dict[str, int] = {}  # lang -> sample_rate
         self._sample_rate = settings.sample_rate
+
+    # ------------------------------------------------------------------
+    # Loading
+    # ------------------------------------------------------------------
+
+    def _load_voice(self, model_path: str, config_path: str, label: str):
+        """Load a single PiperVoice and return (voice, sample_rate)."""
+        from piper import PiperVoice
+
+        config_data = json.loads(Path(config_path).read_text(encoding="utf-8"))
+        sr = int(config_data.get("audio", {}).get("sample_rate", self._sample_rate))
+        debug(self.logger, "piper_config", label=label, sample_rate=sr)
+
+        info(self.logger, "loading voice", label=label, model=model_path)
+        with timeit("load_model") as _:
+            voice = PiperVoice.load(model_path, config_path)
+        return voice, sr
 
     def load(self) -> None:
         if self._loaded:
             return
 
         try:
-            from piper import PiperVoice
-        except Exception as exc:  # pragma: no cover - optional dependency
-            raise RuntimeError("Piper dependency missing. Install requirements_piper.txt") from exc
+            from piper import PiperVoice  # noqa: F401
+        except Exception as exc:
+            raise RuntimeError("Piper dependency missing. Install: pip install piper-tts") from exc
 
+        # Load per-language voices if configured
+        voices_cfg = self._cfg.get("voices", {})
+        for lang, vcfg in voices_cfg.items():
+            mp = vcfg.get("model_path")
+            cp = vcfg.get("config_path")
+            if mp and cp and Path(mp).exists():
+                voice, sr = self._load_voice(mp, cp, label=lang)
+                self._voices[lang] = voice
+                self._sample_rates[lang] = sr
+
+        # Load default voice (always needed as fallback)
         model_path = self._cfg.get("model_path")
         config_path = self._cfg.get("config_path")
         if not model_path or not config_path:
             raise RuntimeError("Piper config requires model_path and config_path.")
 
-        config_data = json.loads(Path(config_path).read_text(encoding="utf-8"))
-        self._sample_rate = int(config_data.get("audio", {}).get("sample_rate", self._sample_rate))
-        debug(self.logger, "piper_config", config=config_data, sample_rate=self._sample_rate)
-
-        info(self.logger, "loading model", model=model_path)
-        with timeit("load_model") as _:
-            self._voice = PiperVoice.load(model_path, config_path)
+        self._default_voice, self._sample_rate = self._load_voice(
+            model_path, config_path, label="default",
+        )
         self._loaded = True
+
+        loaded_langs = list(self._voices.keys()) or ["default"]
+        info(self.logger, "piper ready", voices=loaded_langs)
+
+    # ------------------------------------------------------------------
+    # Synthesis
+    # ------------------------------------------------------------------
+
+    def _resolve_voice(self, language: Optional[str]):
+        """Pick the right PiperVoice for the requested language."""
+        if language and language in self._voices:
+            return self._voices[language], self._sample_rates[language]
+        # Try 2-letter prefix (e.g. "tr-TR" -> "tr")
+        if language and len(language) > 2:
+            short = language[:2].lower()
+            if short in self._voices:
+                return self._voices[short], self._sample_rates[short]
+        return self._default_voice, self._sample_rate
 
     def synthesize(
         self,
@@ -113,9 +163,12 @@ class PiperEngine(BaseTTSEngine):
     ) -> SynthResult:
         if not self._loaded:
             self.load()
-        if self._voice is None:
+
+        voice, sample_rate = self._resolve_voice(language)
+        if voice is None:
             raise RuntimeError("Piper voice not loaded")
-        debug(self.logger, "piper_synth_start", text_len=len(text), text=text[:100])
+
+        debug(self.logger, "piper_synth_start", text_len=len(text), lang=language, text=text[:100])
 
         # Create synthesis config if needed
         try:
@@ -130,18 +183,17 @@ class PiperEngine(BaseTTSEngine):
             syn_config = None
 
         with timeit("synth") as t_synth:
-            # Piper returns an iterator of AudioChunk
-            audio_chunks = list(self._voice.synthesize(text, syn_config))
-            # Combine all chunks (audio_int16_array is the numpy array)
+            audio_chunks = list(voice.synthesize(text, syn_config))
             audio = np.concatenate([chunk.audio_int16_array for chunk in audio_chunks]) if audio_chunks else np.array([], dtype=np.int16)
+
+        if audio.size == 0:
+            raise RuntimeError(f"Piper returned empty audio for text: {text[:80]!r}")
 
         timings = {"synth": t_synth.timing.seconds if t_synth.timing else -1.0}
 
-        # Piper always returns int16 numpy array from AudioChunk.audio_int16_array
-        # Convert int16 to float32 for wav encoding
         wav_float = audio.astype(np.float32) / 32768.0
         with timeit("encode") as t_encode:
-            wav_bytes, _ = wav_bytes_from_float32(wav_float, self._sample_rate)
+            wav_bytes, _ = wav_bytes_from_float32(wav_float, sample_rate)
         timings["encode"] = t_encode.timing.seconds if t_encode.timing else -1.0
 
-        return SynthResult(wav_bytes=wav_bytes, sample_rate=self._sample_rate, timings_s=timings)
+        return SynthResult(wav_bytes=wav_bytes, sample_rate=sample_rate, timings_s=timings)

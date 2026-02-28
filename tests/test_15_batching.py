@@ -48,6 +48,19 @@ class MockEngine:
             timings_s={"synth": self.synth_delay},
         )
 
+    def synthesize_batch(self, requests) -> List[MockSynthResult]:
+        """Mock batch synthesize that delegates to synthesize()."""
+        return [
+            self.synthesize(
+                text=req.text,
+                speaker=req.speaker,
+                language=req.language,
+                speaker_wav=req.speaker_wav,
+                split_sentences=req.split_sentences,
+            )
+            for req in requests
+        ]
+
 
 class TestBatcherDisabled:
     """Test batcher when batching is disabled."""
@@ -315,6 +328,9 @@ class TestBatcherEdgeCases:
         class FailingEngine:
             def synthesize(self, **kwargs):
                 raise ValueError("Synthesis failed")
+
+            def synthesize_batch(self, requests):
+                return [self.synthesize() for _ in requests]
 
         batcher = RequestBatcher(
             FailingEngine(),

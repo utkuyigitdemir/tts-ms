@@ -1,0 +1,40 @@
+# Kokoro TTS - CPU-only ONNX Engine with Preset Voices
+# Python: >=3.10
+# GPU: Not required (ONNX Runtime, CPU inference)
+# Disk: ~300MB for model files
+#
+# Source: https://github.com/thewh1teagle/kokoro-onnx
+# PyPI: https://pypi.org/project/kokoro-onnx/
+# Models: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX
+
+# Main package
+kokoro-onnx>=0.4.0
+
+# Model files must be downloaded separately:
+#   pip install huggingface-hub
+#   python -c "from huggingface_hub import hf_hub_download; \
+#     hf_hub_download('onnx-community/Kokoro-82M-v1.0-ONNX', 'kokoro-v1.0.onnx', local_dir='models/kokoro'); \
+#     hf_hub_download('onnx-community/Kokoro-82M-v1.0-ONNX', 'voices-v1.0.bin', local_dir='models/kokoro')"
+
+# =============================================================================
+# COLAB INSTALLATION
+# =============================================================================
+#
+# !pip install kokoro-onnx huggingface-hub
+# !mkdir -p models/kokoro
+# !python -c "from huggingface_hub import hf_hub_download; \
+#   hf_hub_download('onnx-community/Kokoro-82M-v1.0-ONNX', 'kokoro-v1.0.onnx', local_dir='models/kokoro'); \
+#   hf_hub_download('onnx-community/Kokoro-82M-v1.0-ONNX', 'voices-v1.0.bin', local_dir='models/kokoro')"
+#
+# =============================================================================
+# USAGE EXAMPLE
+# =============================================================================
+#
+# from kokoro_onnx import Kokoro
+# model = Kokoro("models/kokoro/kokoro-v1.0.onnx", "models/kokoro/voices-v1.0.bin")
+# samples, sr = model.create("Hello, this is a test.", voice="af_sarah", speed=1.0, lang="en-us")
+#
+# =============================================================================
+
+# Available voices: af_sarah, af_heart, am_adam, am_michael, bf_emma, etc.
+# Supported languages: en-us, en-gb, ja, zh, fr, ko, es, hi, it, pt, de

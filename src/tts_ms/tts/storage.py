@@ -76,7 +76,7 @@ import json
 import threading
 import time
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from tts_ms.core.config import Defaults
 from tts_ms.core.logging import get_logger, info, verbose, warn
@@ -245,7 +245,11 @@ def save_wav(base_dir: str, key: str, wav_bytes: bytes) -> Dict[str, float]:
         p.parent.mkdir(parents=True, exist_ok=True)
 
         with timeit("storage_write") as t:
-            p.write_bytes(wav_bytes)
+            # Atomic write: write to temp file then rename to prevent corrupt
+            # cache files if the process crashes mid-write
+            tmp = p.with_suffix(".tmp")
+            tmp.write_bytes(wav_bytes)
+            tmp.replace(p)
 
         timings["storage_write"] = t.timing.seconds if t.timing else -1.0
         info(_LOG, "saved", key=key[:8], bytes=len(wav_bytes), seconds=round(timings["storage_write"], 4))
@@ -253,6 +257,13 @@ def save_wav(base_dir: str, key: str, wav_bytes: bytes) -> Dict[str, float]:
         # Log error but don't raise - storage is a cache, not critical (Faz 5.2)
         warn(_LOG, "storage_write_error", key=key[:8], error=str(e))
         timings["storage_write"] = -1.0
+        # Clean up temp file if it exists
+        try:
+            tmp_path = p.with_suffix(".tmp")
+            if tmp_path.exists():
+                tmp_path.unlink()
+        except Exception:
+            pass
 
     return timings
 
@@ -351,10 +362,10 @@ class StorageTTLManager:
 
                 for wav_file in shard_dir.glob("*.wav"):
                     try:
-                        # Check file age
-                        mtime = wav_file.stat().st_mtime
-                        if mtime < cutoff:
-                            size = wav_file.stat().st_size
+                        # Check file age (single stat call)
+                        st = wav_file.stat()
+                        if st.st_mtime < cutoff:
+                            size = st.st_size
                             wav_file.unlink()
                             files_removed += 1
                             bytes_freed += size
@@ -396,7 +407,7 @@ class StorageTTLManager:
                 "total_bytes_freed": self._total_bytes_freed,
             }
 
-    def get_storage_info(self) -> Dict[str, any]:
+    def get_storage_info(self) -> Dict[str, Any]:
         """
         Get information about current storage usage.
 

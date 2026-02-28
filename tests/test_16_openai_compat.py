@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+
 import pytest
 
 
@@ -25,10 +26,11 @@ class TestOpenAIEndpointExists:
     def test_endpoint_exists(self):
         """The /v1/audio/speech endpoint should exist."""
         from fastapi.testclient import TestClient
+
         from tts_ms.main import create_app
 
         app = create_app()
-        with TestClient(app) as client:
+        with TestClient(app):
             # OPTIONS or checking routes
             routes = [r.path for r in app.routes]
             assert "/v1/audio/speech" in routes
@@ -36,6 +38,7 @@ class TestOpenAIEndpointExists:
     def test_endpoint_method_allowed(self):
         """The endpoint should allow POST method."""
         from fastapi.testclient import TestClient
+
         from tts_ms.main import create_app
 
         app = create_app()
@@ -78,6 +81,7 @@ class TestOpenAIRequestFormat:
     def test_speed_validation(self):
         """Speed must be between 0.25 and 4.0."""
         from pydantic import ValidationError
+
         from tts_ms.api.openai_compat import OpenAISpeechRequest
 
         # Valid speeds
@@ -94,6 +98,7 @@ class TestOpenAIRequestFormat:
     def test_empty_input_rejected(self):
         """Empty input should be rejected."""
         from pydantic import ValidationError
+
         from tts_ms.api.openai_compat import OpenAISpeechRequest
 
         with pytest.raises(ValidationError):
@@ -137,6 +142,7 @@ class TestResponseFormat:
     def test_invalid_format_rejected(self):
         """Invalid format should be rejected."""
         from pydantic import ValidationError
+
         from tts_ms.api.openai_compat import OpenAISpeechRequest
 
         with pytest.raises(ValidationError):
@@ -149,6 +155,7 @@ class TestOpenAIErrorResponses:
     def test_validation_error_format(self):
         """Should return error for invalid request."""
         from fastapi.testclient import TestClient
+
         from tts_ms.main import create_app
 
         app = create_app()
@@ -163,6 +170,7 @@ class TestOpenAIErrorResponses:
     def test_missing_input_error(self):
         """Should return error when input is missing."""
         from fastapi.testclient import TestClient
+
         from tts_ms.main import create_app
 
         app = create_app()
@@ -181,7 +189,9 @@ class TestOpenAIIntegration:
     def test_synthesize_returns_audio(self):
         """Full synthesis should return audio bytes when engine is ready."""
         import time
+
         from fastapi.testclient import TestClient
+
         from tts_ms.main import create_app
 
         app = create_app()
@@ -215,7 +225,9 @@ class TestOpenAIIntegration:
     def test_different_voices(self):
         """Different voices should all work when engine is ready."""
         import time
+
         from fastapi.testclient import TestClient
+
         from tts_ms.main import create_app
 
         app = create_app()

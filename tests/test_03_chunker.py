@@ -2,8 +2,8 @@ def test_normalize_and_chunk():
     import sys
     sys.path.append("src")
 
-    from tts_ms.utils.text import normalize_tr
     from tts_ms.tts.chunker import chunk_text
+    from tts_ms.utils.text import normalize_tr
 
     raw = "  Merhaba   Utku !  Bugün   mülakat...  Hazır  mısın?  Harika; başlayalım: şimdi.  "
     norm, t1 = normalize_tr(raw)

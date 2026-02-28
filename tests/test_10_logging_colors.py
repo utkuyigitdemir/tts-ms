@@ -3,10 +3,7 @@ from __future__ import annotations
 
 import io
 import os
-import sys
-from unittest.mock import patch, MagicMock
-
-import pytest
+from unittest.mock import patch
 
 
 class TestColorSupport:
@@ -39,10 +36,9 @@ class TestColorCodes:
 
     def test_colorize_with_colors_enabled(self):
         """_colorize applies color codes when enabled."""
-        from tts_ms.core.logging import _colorize, _Colors
-
         # Force colors on
         import tts_ms.core.logging as log_module
+        from tts_ms.core.logging import _colorize, _Colors
         original = log_module._USE_COLORS
         try:
             log_module._USE_COLORS = True
@@ -55,9 +51,8 @@ class TestColorCodes:
 
     def test_colorize_with_colors_disabled(self):
         """_colorize returns plain text when colors disabled."""
-        from tts_ms.core.logging import _colorize, _Colors
-
         import tts_ms.core.logging as log_module
+        from tts_ms.core.logging import _colorize, _Colors
         original = log_module._USE_COLORS
         try:
             log_module._USE_COLORS = False
@@ -73,42 +68,42 @@ class TestTagColors:
 
     def test_success_tag_color(self):
         """SUCCESS tag uses green color."""
-        from tts_ms.core.logging import _get_tag_color, _Colors
+        from tts_ms.core.logging import _Colors, _get_tag_color
 
         color = _get_tag_color("SUCCESS")
         assert color == _Colors.BRIGHT_GREEN
 
     def test_error_tag_color(self):
         """ERROR tag uses red color."""
-        from tts_ms.core.logging import _get_tag_color, _Colors
+        from tts_ms.core.logging import _Colors, _get_tag_color
 
         color = _get_tag_color("ERROR")
         assert color == _Colors.BRIGHT_RED
 
     def test_fail_tag_color(self):
         """FAIL tag uses red color."""
-        from tts_ms.core.logging import _get_tag_color, _Colors
+        from tts_ms.core.logging import _Colors, _get_tag_color
 
         color = _get_tag_color("FAIL")
         assert color == _Colors.BRIGHT_RED
 
     def test_warn_tag_color(self):
         """WARN tag uses yellow color."""
-        from tts_ms.core.logging import _get_tag_color, _Colors
+        from tts_ms.core.logging import _Colors, _get_tag_color
 
         color = _get_tag_color("WARN")
         assert color == _Colors.BRIGHT_YELLOW
 
     def test_info_tag_color(self):
         """INFO tag uses cyan color."""
-        from tts_ms.core.logging import _get_tag_color, _Colors
+        from tts_ms.core.logging import _Colors, _get_tag_color
 
         color = _get_tag_color("INFO")
         assert color == _Colors.BRIGHT_CYAN
 
     def test_debug_tag_color(self):
         """DEBUG tag uses gray color."""
-        from tts_ms.core.logging import _get_tag_color, _Colors
+        from tts_ms.core.logging import _Colors, _get_tag_color
 
         color = _get_tag_color("DEBUG")
         assert color == _Colors.GRAY
@@ -119,10 +114,8 @@ class TestColoredOutput:
 
     def test_output_contains_ansi_when_tty(self):
         """Output contains ANSI codes when stdout is a TTY."""
-        from tts_ms.core.logging import (
-            configure_logging, get_logger, success, _Colors
-        )
         import tts_ms.core.logging as log_module
+        from tts_ms.core.logging import configure_logging, get_logger, success
 
         # Force colors on AFTER configure_logging (which resets it)
         original = log_module._USE_COLORS
@@ -143,8 +136,8 @@ class TestColoredOutput:
 
     def test_output_no_ansi_when_no_color(self):
         """Output has no ANSI codes when colors disabled."""
-        from tts_ms.core.logging import configure_logging, get_logger, success
         import tts_ms.core.logging as log_module
+        from tts_ms.core.logging import configure_logging, get_logger, success
 
         original = log_module._USE_COLORS
         try:
@@ -169,9 +162,10 @@ class TestTimingColors:
 
     def test_fast_timing_color(self):
         """Fast timings (<0.1s) should use green."""
-        from tts_ms.core.logging import _ColoredConsoleFormatter, _Colors
-        import tts_ms.core.logging as log_module
         import logging
+
+        import tts_ms.core.logging as log_module
+        from tts_ms.core.logging import _ColoredConsoleFormatter, _Colors
 
         original = log_module._USE_COLORS
         try:

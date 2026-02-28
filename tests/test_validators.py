@@ -9,16 +9,17 @@ Tests cover:
 - Edge cases: Turkish characters, special chars
 """
 import base64
+
 import pytest
 
 from tts_ms.services.validators import (
-    ValidationError,
-    validate_text,
-    validate_speaker_wav_b64,
-    validate_speaker,
-    validate_language,
     MAX_SPEAKER_WAV_B64_BYTES,
     MAX_SPEAKER_WAV_BYTES,
+    ValidationError,
+    validate_language,
+    validate_speaker,
+    validate_speaker_wav_b64,
+    validate_text,
 )
 
 
@@ -76,11 +77,15 @@ class TestValidateText:
         with pytest.raises(ValidationError):
             validate_text("hello", max_length=3)
 
-    def test_whitespace_only_is_valid(self):
-        """validate_text should accept whitespace-only text (falsy but truthy string)."""
-        # Note: "   " is truthy in Python
-        result = validate_text("   ")
-        assert result == "   "
+    def test_whitespace_only_is_rejected(self):
+        """validate_text should reject whitespace-only text."""
+        with pytest.raises(ValidationError):
+            validate_text("   ")
+
+    def test_leading_trailing_whitespace_is_stripped(self):
+        """validate_text should strip leading/trailing whitespace."""
+        result = validate_text("  hello  ")
+        assert result == "hello"
 
 
 class TestValidateSpeakerWavB64:

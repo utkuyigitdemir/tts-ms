@@ -1,0 +1,19 @@
+INTERVIEW_QUESTIONS = [
+    "Sizi neden işe almalıyız? Ben bu pozisyon için en uygun adayım çünkü hem teknik bilgiye hem de takım çalışmasına yatkınlığa sahibim. Önceki projelerimde başarılı sonuçlar elde ettim ve şirketinize değer katabileceğime inanıyorum.",
+    
+    "Siz bizi neden seçtiniz? Şirketinizin inovatif yaklaşımı ve sektördeki öncül konumu beni çok etkiledi. Ayrıca çalışanlarına verdiği değer ve kariyer gelişim fırsatları da tercihimde önemli rol oynadı.",
+    
+    "Kendinizde kötü gördüğünüz özellikler nelerdir? Bazen aşırı detaycı olabiliyorum ve bu projelerin tamamlanma süresini uzatabiliyor. Ancak bu özelliğimi daha iyi yönetmek için zaman yönetimi teknikleri uyguluyorum.",
+    
+    "Beş yıl sonra kendinizi nerede görüyorsunuz? Beş yıl sonra bu alanda uzmanlaşmış ve takım liderliğine geçmiş biri olarak kendimi görüyorum. Ayrıca sektörün gelişimine katkıda bulunmak istiyorum.",
+    
+    "Maaş beklentiniz nedir? Piyasa koşullarını ve pozisyonun gerekliliklerini dikkate alarak, tecrübeme uygun adil bir ücret bekliyorum. Rakam konusunda esneğim ve şirketin bütçesine göre değerlendirmeye açığım."
+]
+
+QUESTION_TITLES = [
+    "Sizi neden işe almalıyız",
+    "Siz bizi neden seçtiniz",
+    "Kötü özellikleriniz",
+    "5 yıl sonra",
+    "Maaş beklentisi"
+]

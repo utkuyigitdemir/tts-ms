@@ -36,8 +36,8 @@ Example:
 """
 from __future__ import annotations
 
-import base64
 import builtins
+import json
 import os
 import threading
 import time
@@ -45,7 +45,18 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Generator, Optional
 
 from tts_ms.core.config import Settings, TTSServiceConfig
-from tts_ms.core.logging import debug, error, fail, get_logger, info, success, verbose, warn
+from tts_ms.core.logging import (
+    debug,
+    error,
+    fail,
+    get_logger,
+    get_run_dir,
+    info,
+    set_request_id,
+    success,
+    verbose,
+    warn,
+)
 from tts_ms.core.metrics import metrics
 from tts_ms.core.resources import ResourceDelta, ResourceSampler, get_sampler, resourceit
 from tts_ms.tts.batcher import RequestBatcher, get_batcher
@@ -125,6 +136,12 @@ class QueueFullError(TTSError):
     """Raised when request queue is full and cannot accept more requests."""
     def __init__(self, message: str, details: Optional[Dict] = None):
         super().__init__(message, ErrorCode.QUEUE_FULL, details)
+
+
+class InvalidInputError(TTSError):
+    """Raised when request input validation fails."""
+    def __init__(self, message: str, details: Optional[Dict] = None):
+        super().__init__(message, ErrorCode.INVALID_INPUT, details)
 
 
 # =============================================================================
@@ -323,6 +340,11 @@ class TTSService:
         return self._engine
 
     @property
+    def engine_name(self) -> str:
+        """Get the TTS engine name."""
+        return self._engine.name
+
+    @property
     def settings(self) -> Settings:
         """Get the settings object."""
         return self._settings
@@ -397,6 +419,7 @@ class TTSService:
                 self._warmup_seconds = time.perf_counter() - t0
                 self._warmed_up = True
                 success(_LOG, "warmup_done", seconds=round(self._warmup_seconds, 3))
+                self._update_run_info()
             except Exception as e:
                 error(_LOG, "warmup_failed", error=str(e))
             finally:
@@ -404,27 +427,54 @@ class TTSService:
 
         threading.Thread(target=_do, daemon=True).start()
 
+    def _update_run_info(self) -> None:
+        """Update run_info.json with engine details after warmup."""
+        run_dir = get_run_dir()
+        if not run_dir:
+            return
+        info_path = run_dir / "run_info.json"
+        try:
+            if info_path.exists():
+                data = json.loads(info_path.read_text(encoding="utf-8"))
+            else:
+                data = {}
+            data.update({
+                "engine": self._engine.name,
+                "device": str(getattr(self._engine, "device", "unknown")),
+                "sample_rate": getattr(self._engine, "sample_rate", None),
+                "warmup_done": True,
+                "warmup_time_s": round(self._warmup_seconds, 3) if self._warmup_seconds else None,
+            })
+            info_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        except Exception as e:
+            warn(_LOG, "run_info_update_failed", error=str(e))
+
     # =========================================================================
     # Helper Methods
     # =========================================================================
 
     def decode_speaker_wav(self, b64: Optional[str]) -> Optional[bytes]:
         """
-        Decode base64-encoded speaker reference audio.
+        Validate and decode base64-encoded speaker reference audio.
+
+        Uses validators module for size and format checks.
 
         Args:
             b64: Base64 string of WAV audio data.
 
         Returns:
-            Decoded bytes or None if invalid.
+            Decoded bytes or None if not provided.
+
+        Raises:
+            InvalidInputError: If base64 is invalid or audio exceeds size limits.
         """
         if not b64:
             return None
+        from tts_ms.services.validators import ValidationError, validate_speaker_wav_b64
         try:
-            return base64.b64decode(b64)
-        except Exception:
-            warn(_LOG, "speaker_wav_b64_invalid")
-            return None
+            return validate_speaker_wav_b64(b64)
+        except ValidationError as e:
+            raise InvalidInputError(e.message, details={"code": e.code})
 
     def _resolve_speaker_language(
         self,
@@ -784,58 +834,209 @@ class TTSService:
         Raises:
             SynthesisError: If any chunk synthesis fails.
         """
+        set_request_id(request_id)
+        timings: Dict[str, float] = {}
+        resource_deltas: list[ResourceDelta] = []
+
         speaker, language = self._resolve_speaker_language(request.speaker, request.language)
 
         preview = request.text[:self._text_preview_chars] if self._text_preview_chars > 0 else ""
-        info(_LOG, "stream_request", chars=len(request.text), text_preview=preview)
+        info(_LOG, "stream_request", chars=len(request.text), text_preview=preview,
+             request_id=request_id)
 
-        normalized, _ = normalize_tr(request.text)
-        chunks = self._chunk_text(normalized)
+        try:
+            with timeit("stream_total") as total_t:
+                # ─────────────────────────────────────────────────────────────
+                # Stage 1: Normalize text
+                # ─────────────────────────────────────────────────────────────
+                with timeit("normalize") as t_norm:
+                    normalized, _ = normalize_tr(request.text)
+                if t_norm.timing:
+                    timings["normalize"] = t_norm.timing.seconds
+                    verbose(_LOG, "stage", event="normalize",
+                            seconds=round(timings["normalize"], 4))
 
-        t0 = time.perf_counter()
+                info(_LOG, "normalized", chars_in=len(request.text),
+                     chars_out=len(normalized))
 
-        for i, chunk_str in enumerate(chunks):
-            key = self._engine.cache_key(chunk_str, speaker, language, request.speaker_wav)
+                # ─────────────────────────────────────────────────────────────
+                # Stage 2: Chunk text
+                # ─────────────────────────────────────────────────────────────
+                with timeit("chunk") as t_chunk:
+                    chunks = self._chunk_text(normalized)
+                if t_chunk.timing:
+                    timings["chunk"] = t_chunk.timing.seconds
+                    verbose(_LOG, "stage", event="chunk",
+                            seconds=round(timings["chunk"], 4),
+                            breath_groups=self._use_breath_groups)
 
-            wav_bytes, sr, cache_status = self._check_cache(key)
-            t_synth = 0.0
-            t_encode = 0.0
+                total_bytes = 0
+                cache_hits = 0
 
-            if cache_status == "miss":
-                t1 = time.perf_counter()
-                try:
-                    result = self._do_synthesis(
-                        text=chunk_str,
-                        speaker=speaker,
-                        language=language,
-                        speaker_wav=request.speaker_wav,
-                        cache_key=key,
-                        split_sentences=request.split_sentences,
+                for i, chunk_str in enumerate(chunks):
+                    key = self._engine.cache_key(
+                        chunk_str, speaker, language, request.speaker_wav,
                     )
-                    t2 = time.perf_counter()
 
-                    wav_bytes = result.wav_bytes
-                    sr = result.sample_rate
-                    self._store_cache(key, wav_bytes, sr)
+                    # ─────────────────────────────────────────────────────────
+                    # Stage 3: Cache lookup (per chunk)
+                    # ─────────────────────────────────────────────────────────
+                    with timeit("cache_lookup") as t_cache:
+                        wav_bytes, sr, cache_status = self._check_cache(key)
+                    if t_cache.timing:
+                        verbose(_LOG, "stage", event="cache_lookup",
+                                seconds=round(t_cache.timing.seconds, 4),
+                                cache=cache_status, chunk=i)
 
-                    t_synth = result.timings_s.get("synth", t2 - t1)
-                    t_encode = result.timings_s.get("encode", 0.0)
-                except TTSError:
-                    raise
-                except Exception as e:
-                    raise SynthesisError(f"Stream chunk {i} failed: {str(e)}")
+                    t_synth_s = 0.0
+                    t_encode_s = 0.0
 
-            yield StreamChunk(
-                index=i,
-                total=len(chunks),
-                wav_bytes=wav_bytes,
-                cache_status=cache_status,
-                synth_time=t_synth,
-                encode_time=t_encode,
+                    # Record cache metrics
+                    if cache_status == "mem":
+                        metrics.record_cache("hit", tier="mem")
+                        cache_hits += 1
+                    elif cache_status == "disk":
+                        metrics.record_cache("hit", tier="disk")
+                        cache_hits += 1
+                    else:
+                        metrics.record_cache("miss")
+
+                    # ─────────────────────────────────────────────────────────
+                    # Stage 4: Synthesize (if cache miss)
+                    # ─────────────────────────────────────────────────────────
+                    if cache_status == "miss":
+                        try:
+                            with timeit("synth") as t_synth, \
+                                    resourceit("synth", sampler=self._sampler) as r_synth:
+                                result = self._do_synthesis(
+                                    text=chunk_str,
+                                    speaker=speaker,
+                                    language=language,
+                                    speaker_wav=request.speaker_wav,
+                                    cache_key=key,
+                                    split_sentences=request.split_sentences,
+                                )
+                            if t_synth.timing:
+                                t_synth_s = result.timings_s.get(
+                                    "synth", t_synth.timing.seconds,
+                                )
+                                verbose(_LOG, "stage", event="synth",
+                                        seconds=round(t_synth.timing.seconds, 4),
+                                        chunk=i)
+
+                            # Log per-stage resources (VERBOSE level)
+                            if r_synth.resources and self._config.resources.log_per_stage:
+                                resource_deltas.append(r_synth.resources)
+                                verbose(_LOG, "resources", stage="synth",
+                                        chunk=i, **r_synth.resources.to_dict())
+
+                            wav_bytes = result.wav_bytes
+                            sr = result.sample_rate
+                            t_encode_s = result.timings_s.get("encode", 0.0)
+
+                            if t_encode_s:
+                                verbose(_LOG, "stage", event="encode",
+                                        seconds=round(t_encode_s, 4), chunk=i)
+
+                            # ─────────────────────────────────────────────────
+                            # Stage 5: Store in cache
+                            # ─────────────────────────────────────────────────
+                            with timeit("cache_store") as t_store:
+                                self._store_cache(key, wav_bytes, sr)
+                            if t_store.timing:
+                                verbose(_LOG, "stage", event="cache_store",
+                                        seconds=round(t_store.timing.seconds, 4),
+                                        chunk=i)
+
+                        except TTSError:
+                            raise
+                        except Exception as e:
+                            fail(_LOG, "stream_chunk_failed", chunk=i,
+                                 error=str(e), error_type=type(e).__name__)
+                            metrics.record_request(
+                                engine=self._engine.name,
+                                status="error",
+                                duration=-1,
+                                cache_status="miss",
+                                audio_bytes=0,
+                            )
+                            raise SynthesisError(
+                                f"Stream chunk {i} failed: {str(e)}",
+                                {"chunk": i, "error_type": type(e).__name__},
+                            )
+
+                    chunk_bytes = len(wav_bytes) if wav_bytes else 0
+                    total_bytes += chunk_bytes
+
+                    info(_LOG, "stream_chunk", i=i, n=len(chunks),
+                         cache=cache_status, bytes=chunk_bytes)
+
+                    yield StreamChunk(
+                        index=i,
+                        total=len(chunks),
+                        wav_bytes=wav_bytes,
+                        cache_status=cache_status,
+                        synth_time=t_synth_s,
+                        encode_time=t_encode_s,
+                    )
+
+            # Stream complete
+            total_s = total_t.timing.seconds if total_t.timing else -1.0
+            success(_LOG, "stream_done", chunks=len(chunks),
+                    bytes=total_bytes, cache_hits=cache_hits,
+                    seconds=round(total_s, 3))
+
+            # Log resource summary (NORMAL level)
+            if self._config.resources.log_summary and resource_deltas:
+                cpu_avg = sum(d.cpu_percent for d in resource_deltas) / len(resource_deltas)
+                ram_delta_total = sum(d.ram_delta_mb for d in resource_deltas)
+                has_gpu = any(d.has_gpu for d in resource_deltas)
+                gpu_values = [d.gpu_percent for d in resource_deltas if d.gpu_percent is not None]
+                gpu_avg = sum(gpu_values) / len(gpu_values) if gpu_values else None
+                gpu_vram_delta = sum(
+                    d.gpu_vram_delta_mb for d in resource_deltas
+                    if d.gpu_vram_delta_mb is not None
+                )
+
+                summary_data: Dict[str, Any] = {
+                    "cpu_percent": round(cpu_avg, 1),
+                    "ram_delta_mb": round(ram_delta_total, 1),
+                    "has_gpu": has_gpu,
+                }
+                if gpu_avg is not None:
+                    summary_data["gpu_percent"] = round(gpu_avg, 1)
+                if gpu_vram_delta:
+                    summary_data["gpu_vram_delta_mb"] = round(gpu_vram_delta, 1)
+
+                info(_LOG, "resources_summary", **summary_data)
+
+            # Record request metrics
+            metrics.record_request(
+                engine=self._engine.name,
+                status="success",
+                duration=total_s,
+                cache_status="miss" if cache_hits == 0 else "hit",
+                audio_bytes=total_bytes,
             )
 
-        total = time.perf_counter() - t0
-        return (len(chunks), total)
+            return (len(chunks), total_s)
+
+        except TTSError:
+            # Re-raise our custom errors as-is
+            raise
+        except Exception as e:
+            fail(_LOG, "stream_failed", error=str(e), error_type=type(e).__name__)
+            metrics.record_request(
+                engine=self._engine.name,
+                status="error",
+                duration=-1,
+                cache_status="miss",
+                audio_bytes=0,
+            )
+            raise SynthesisError(
+                f"Stream failed: {str(e)}",
+                {"error_type": type(e).__name__},
+            )
 
     # =========================================================================
     # Health Check

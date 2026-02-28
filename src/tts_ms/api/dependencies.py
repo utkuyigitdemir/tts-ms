@@ -46,9 +46,13 @@ See Also:
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 from tts_ms.core.config import Settings, load_settings
-from tts_ms.services.tts_service import TTSService, get_service
+from tts_ms.services.tts_service import get_service
+
+if TYPE_CHECKING:
+    from tts_ms.services.tts_service import TTSService
 
 
 @lru_cache(maxsize=1)

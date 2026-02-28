@@ -1,0 +1,37 @@
+# Qwen3-TTS - Alibaba's TTS with Preset Speakers and Voice Cloning
+# Python: >=3.10
+# GPU: CUDA recommended (~3-4 GB VRAM for 0.6B model)
+# Disk: ~2-3GB for model download
+#
+# Source: https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice
+# PyPI: https://pypi.org/project/qwen-tts/
+
+# PyTorch with CUDA (install first, match your CUDA version)
+# Colab (CUDA 12.1):
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# Main package
+qwen-tts>=0.1.0
+
+# =============================================================================
+# COLAB INSTALLATION
+# =============================================================================
+#
+# !pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+# !pip install qwen-tts
+#
+# =============================================================================
+# USAGE EXAMPLE
+# =============================================================================
+#
+# from qwen_tts import QwenTTS
+# model = QwenTTS("Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice", device="cuda")
+# wav, sr = model.generate("Hello, this is a test.", speaker="Vivian")
+#
+# =============================================================================
+
+# Preset speakers: Vivian, Serena, Ethan, Chelsie
+# Supports voice cloning from reference audio via speaker_wav parameter
+# Model auto-downloads from HuggingFace on first run

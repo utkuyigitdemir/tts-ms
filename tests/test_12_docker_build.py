@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 # Project root
 PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -35,9 +33,9 @@ class TestDockerfileSyntax:
         """Dockerfile starts with FROM instruction."""
         dockerfile = PROJECT_ROOT / "Dockerfile"
         content = dockerfile.read_text()
-        lines = [l.strip() for l in content.split("\n") if l.strip() and not l.strip().startswith("#")]
+        lines = [line.strip() for line in content.split("\n") if line.strip() and not line.strip().startswith("#")]
         # First non-comment, non-ARG line should be FROM or ARG
-        assert any(l.startswith("FROM") or l.startswith("ARG") for l in lines[:5])
+        assert any(line.startswith("FROM") or line.startswith("ARG") for line in lines[:5])
 
     def test_dockerfile_has_entrypoint_or_cmd(self):
         """Dockerfile has ENTRYPOINT or CMD."""

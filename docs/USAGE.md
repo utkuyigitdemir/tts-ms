@@ -154,6 +154,11 @@ tts-ms --file inputs.txt --out output_dir/
 
 # Dry run (no synthesis, shows chunking)
 tts-ms --text "Uzun bir metin. İkinci cümle." --dry-run --json
+
+# Engine management
+tts-ms --engines                      # Check all engine status
+tts-ms --setup piper                  # Check engine requirements
+tts-ms --setup f5tts --auto-install   # Setup with auto pip install
 ```
 
 ---
@@ -408,7 +413,7 @@ streamTTS('Merhaba dünya. Nasılsınız?');
 
 ## 6. Voice Cloning
 
-For engines that support voice cloning (legacy, f5tts, cosyvoice, chatterbox).
+For engines that support voice cloning (legacy, f5tts, cosyvoice, chatterbox, qwen3tts, vibevoice).
 
 ### Step 1: Prepare Reference Audio
 
@@ -468,10 +473,18 @@ with open("cloned_output.wav", "wb") as f:
 
 | Variable | Values | Default | Description |
 |----------|--------|---------|-------------|
-| `TTS_MODEL_TYPE` | piper, legacy, f5tts, cosyvoice, styletts2, chatterbox | - | Engine selection |
+| `TTS_MODEL_TYPE` | piper, legacy, f5tts, cosyvoice, styletts2, chatterbox, kokoro, qwen3tts, vibevoice | - | Engine selection |
 | `TTS_DEVICE` | cuda, cpu | cuda | Compute device |
 | `TTS_MS_LOG_LEVEL` | 1, 2, 3, 4 | 2 | Verbosity (1=minimal, 4=debug) |
+| `TTS_MS_RUNS_DIR` | path | `./runs` | Per-run log directory |
 | `TTS_MS_SKIP_WARMUP` | 0, 1 | 0 | Skip warmup (testing only) |
+| `TTS_MS_NO_COLOR` | 0, 1 | 0 | Disable colored console output |
+| `TTS_HOME` | path | system default | Model cache directory |
+| `TTS_MS_RESOURCES_ENABLED` | 0, 1 | 1 | Enable/disable resource monitoring |
+| `TTS_MS_RESOURCES_PER_STAGE` | 0, 1 | 1 | Log per-stage resources (VERBOSE) |
+| `TTS_MS_RESOURCES_SUMMARY` | 0, 1 | 1 | Log resource summary (NORMAL) |
+| `TTS_MS_AUTO_INSTALL` | 0, 1 | 0 | Auto-install missing pip packages |
+| `TTS_MS_SKIP_SETUP` | 0, 1 | 0 | Skip engine requirement checks |
 
 ### API Endpoints
 
@@ -513,6 +526,9 @@ with open("cloned_output.wav", "wb") as f:
 | cosyvoice | Yes | Yes | Natural prosody |
 | styletts2 | Yes | No | Style control |
 | chatterbox | Yes | Yes | Expressive speech |
+| kokoro | No | No | CPU-only, preset voices (ONNX) |
+| qwen3tts | Yes | Yes | Preset voices + voice cloning |
+| vibevoice | Yes | Yes | Research, high-quality cloning |
 
 ### SSE Event Types
 

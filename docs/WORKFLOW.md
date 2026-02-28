@@ -97,11 +97,18 @@ src/tts_ms/core/config.py:125-217
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `TTS_MODEL_TYPE` | Engine selection (piper, f5tts, cosyvoice, styletts2, chatterbox, legacy) | settings.yaml |
+| `TTS_MODEL_TYPE` | Engine selection (piper, f5tts, cosyvoice, styletts2, chatterbox, legacy, kokoro, qwen3tts, vibevoice) | settings.yaml |
 | `TTS_DEVICE` | Compute device (cuda/cpu) | cuda |
 | `TTS_MS_LOG_LEVEL` | 1=MINIMAL, 2=NORMAL, 3=VERBOSE, 4=DEBUG | 2 |
 | `TTS_MS_SKIP_WARMUP` | Skip engine warmup (testing) | 0 |
 | `TTS_HOME` | Model cache directory | system default |
+| `TTS_MS_NO_COLOR` | Disable colored console output | 0 |
+| `TTS_MS_RUNS_DIR` | Per-run log directory | `./runs` |
+| `TTS_MS_RESOURCES_ENABLED` | Enable/disable resource monitoring | 1 |
+| `TTS_MS_RESOURCES_PER_STAGE` | Log per-stage resources (VERBOSE level) | 1 |
+| `TTS_MS_RESOURCES_SUMMARY` | Log resource summary (NORMAL level) | 1 |
+| `TTS_MS_AUTO_INSTALL` | Auto-install missing pip packages at startup | 0 |
+| `TTS_MS_SKIP_SETUP` | Skip engine requirement checks | 0 |
 
 ---
 
@@ -214,14 +221,12 @@ class TTSRequest:
 
 ### 4.4 Input Validation
 
-```
-src/tts_ms/services/validators.py:64-100+
-```
+Input validation is handled at two layers:
 
-Validation rules applied before synthesis:
-- Text: Required, max 4000 characters
-- Speaker WAV: Max 10MB base64 (≈7.5MB decoded audio)
-- Validation errors return HTTP 400 with structured error response
+- **Pydantic schemas** (`api/schemas.py`): Enforces field types, max text length (4000 chars), and max `speaker_wav_b64` size
+- **Validators module** (`services/validators.py`): Defines additional validation functions (text, speaker, language, speaker_wav) — available for custom pipelines
+
+Validation errors return HTTP 400/422 with structured error responses.
 
 ---
 
